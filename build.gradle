@@ -1,0 +1,15 @@
+apply plugin: 'war'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies{
+	providedCompile 'javax.servlet:servlet-api:2.5'
+	providedCompile 'javax.json:javax.json-api:1.1'
+	providedCompile 'javax.ws.rs:javax.ws.rs-api:2.0.1'
+}
+
+war{
+	classpath fileTree('lib') 
+}
