@@ -11,3 +11,5 @@ All operations return JSON.  A portfolio object contains fields named owner, tot
 For example, doing a PUT to http://localhost:9080/portfolio/John?symbol=IBM&shares=123 (against a freshly created portfolio for John) would return JSON like {"owner": "John", "total": 19120.35, "loyalty": "Bronze", "stocks": [{"symbol": "IBM", "shares": 123, "price": 155.45, "total": 19120.35, "date": "2017-06-26"}]}.
 
 The above REST call would also add a row to the Stocks table via a SQL statement like "INSERT INTO Stock (owner, symbol, shares, price, total, dateQuoted) VALUES ('John', 'IBM', 123, 155.45, 19120.35, '2017-06-26')", and would update the corresponding row in the Portfolio table via a SQL statement like "UPDATE Portfolio SET total = 19120.35, loyalty = 'Bronze' WHERE owner = 'John'".
+
+Note that the db2jcc4.jar file needs to be in the war file's WEB-INF/lib directory.  As a to-do, need to update the code to use a Liberty datasource, and make corresponding updates to the server.xml to define a JDBC provider for DB2 and to make that datasource available via JNDI lookup.  For now, this service just talks to JDBC the Java SE way instead.
