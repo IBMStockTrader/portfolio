@@ -1,10 +1,14 @@
 This service manages a stock portfolio.  The data is backed by two DB2 tables, communicated with via JDBC.  The following operations are available:
 
-GET / - gets summary data for all portfolios
-POST /{owner} - creates a new portfolio for the specified owner
-GET /{owner} - gets details for the specified owner
-PUT /{owner} - updates the portfolio for the specified owner (by adding a stock)
-DELETE /{owner} - removes the portfolio for the specified owner
+GET / - gets summary data for all portfolios.
+
+POST /{owner} - creates a new portfolio for the specified owner.
+
+GET /{owner} - gets details for the specified owner.
+
+PUT /{owner} - updates the portfolio for the specified owner (by adding a stock).
+
+DELETE /{owner} - removes the portfolio for the specified owner.
 
 All operations return JSON.  A portfolio object contains fields named owner, total, and loyalty, plus an array of stocks.  A stock object contains fields named symbol, shares, price, total, and date.  The PUT operation takes query params named symbol and shares.
 
