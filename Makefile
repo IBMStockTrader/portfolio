@@ -9,6 +9,6 @@ build:
 image: build
 	docker build -t $(IMAGE_NAME) .
 
-release:
+release: image
 	docker tag $(IMAGE_NAME) $(IMAGE_REPO)/$(IMAGE_NAME):$(RELEASE_TAG)
 	docker push $(IMAGE_REPO)/$(IMAGE_NAME):$(RELEASE_TAG)
