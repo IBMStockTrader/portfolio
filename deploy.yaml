@@ -27,6 +27,27 @@ spec:
       containers:
       - name: portfolio
         image: kyleschlosser/portfolio:db2
+        env:
+          - name: JDBC_DRIVER
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: driver
+          - name: JDBC_URL
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: url
+          - name: JDBC_ID
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: id
+          - name: JDBC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: pwd
         ports:
           - containerPort: 9080
         imagePullPolicy: Always
