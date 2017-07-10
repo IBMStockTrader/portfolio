@@ -1,3 +1,19 @@
+/*
+       Copyright 2017 IBM Corp All Rights Reserved
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+
 package com.ibm.hybrid.cloud.sample.portfolio;
 
 //Standard HTTP request classes.  Maybe replace these with use of JAX-RS 2.0 client package instead...
@@ -39,21 +55,21 @@ import javax.ws.rs.Path;
  *  TODO: Should update to use a DataSource, and PreparedStatements.
  */
 public class Portfolio extends Application {
-//	private static final String   QUOTE_SERVICE = "http://localhost:9080/stock-quote";
-//	private static final String LOYALTY_SERVICE = "http://localhost:9080/loyalty-level";
 	private static final String   QUOTE_SERVICE = "http://stock-quote-service:9080/stock-quote";
 	private static final String LOYALTY_SERVICE = "http://loyalty-level-service:9080/loyalty-level";
-	private static final String    DB2_DRIVER   = "com.ibm.db2.jcc.DB2Driver";
-//	private final static String    DB2_URL      = "jdbc:db2://9.42.17.188:30287/sample"; //external Ingress URL
-	private final static String    DB2_URL      = "jdbc:db2://intended-otter-db2:50000/sample"; //Kube DNS URL
-	private final static String    DB2_USER     = "db2inst1";
-	private final static String    DB2_PASSWORD = "password";
+	private String                  jdbc_driver = null;
+	private String                     jdbc_url = null;
+	private String                     jdbc_id  = null;
+	private String                     jdbc_pwd = null;
 
 	public Portfolio() {
+		super();
+
 		try {
-			Class.forName(DB2_DRIVER); //load our JDBC driver
-		} catch (ClassNotFoundException notFound) {
-			notFound.printStackTrace();
+			readSecrets();
+			Class.forName(jdbc_driver); //load our JDBC driver
+		} catch (Throwable t) {
+			t.printStackTrace();
 		}
 	}
 
@@ -245,10 +261,10 @@ public class Portfolio extends Application {
 	}
 
 	private void invokeJDBC(String command) throws SQLException {
-		//TODO: Need to replace following line with use of a DataSource from Liberty
-		Connection connection = DriverManager.getConnection(DB2_URL, DB2_USER, DB2_PASSWORD);
-
+		//Need to replace following line with use of a DataSource from Liberty
+		Connection connection = DriverManager.getConnection(jdbc_url, jdbc_id, jdbc_pwd);
 		Statement statement = connection.createStatement();
+
 		statement.executeUpdate(command);
 
 		statement.close();
@@ -257,9 +273,9 @@ public class Portfolio extends Application {
 
 	private ResultSet invokeJDBCWithResults(String command) throws SQLException {
 		//Need to replace following line with use of a DataSource from Liberty
-		Connection connection = DriverManager.getConnection(DB2_URL, DB2_USER, DB2_PASSWORD);
-
+		Connection connection = DriverManager.getConnection(jdbc_url, jdbc_id, jdbc_pwd);
 		Statement statement = connection.createStatement();
+
 		statement.executeQuery(command);
 
 		ResultSet results = statement.getResultSet();
@@ -274,5 +290,52 @@ public class Portfolio extends Application {
 		results.close();
 		statement.close();
 		connection.close();
+	}
+
+	private void readSecrets() {
+		/* Example kubernetes secret creation command:
+		   kubectl create secret generic db2 --from-literal=id=db2inst1
+		   --from-literal=pwd=password
+		   --from-literal=url=jdbc:db2://intended-otter-db2:50000/sample
+		   --from-literal=driver=com.ibm.db2.jcc.DB2Driver
+		 */
+
+		/* Example deployment yaml stanza:
+           spec:
+             containers:
+             - name: portfolio
+               image: kyleschlosser/portfolio:db2
+               env:
+                 - name: JDBC_DRIVER
+                   valueFrom:
+                     secretKeyRef:
+                       name: db2
+                       key: driver
+                 - name: JDBC_URL
+                   valueFrom:
+                     secretKeyRef:
+                       name: db2
+                       key: url
+                 - name: JDBC_ID
+                   valueFrom:
+                     secretKeyRef:
+                       name: db2
+                       key: id
+                 - name: JDBC_PASSWORD
+                   valueFrom:
+                     secretKeyRef:
+                       name: db2
+                       key: pwd
+               ports:
+                 - containerPort: 9080
+               imagePullPolicy: Always
+             imagePullSecrets:
+             - name: dockerhubsecret
+		 */
+
+		jdbc_driver = System.getenv("JDBC_DRIVER");
+		jdbc_url = System.getenv("JDBC_URL");
+		jdbc_id  = System.getenv("JDBC_ID");
+		jdbc_pwd = System.getenv("JDBC_PWD");
 	}
 }
