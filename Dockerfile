@@ -14,4 +14,4 @@
 
 FROM websphere-liberty:microProfile
 COPY server.xml /config/server.xml
-COPY build/libs/portfolio.war /config/apps/Portfolio.war
+COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
