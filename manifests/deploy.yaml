@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: portfolio
-        image: kyleschlosser/portfolio:db2
+        image: portfolio:latest
         env:
           - name: JDBC_DRIVER
             valueFrom:
@@ -51,8 +51,6 @@ spec:
         ports:
           - containerPort: 9080
         imagePullPolicy: Always
-      imagePullSecrets:
-      - name: dockerhubsecret
 ---
 #Deploy the service
 apiVersion: v1
