@@ -336,6 +336,6 @@ public class Portfolio extends Application {
 		jdbc_driver = System.getenv("JDBC_DRIVER");
 		jdbc_url = System.getenv("JDBC_URL");
 		jdbc_id  = System.getenv("JDBC_ID");
-		jdbc_pwd = System.getenv("JDBC_PWD");
+		jdbc_pwd = System.getenv("JDBC_PASSWORD");
 	}
 }
