@@ -67,6 +67,8 @@ public class Portfolio extends Application {
 
 		try {
 			readSecrets();
+
+			//requires JDBC jar in war file's WEB-INF/lib directory
 			Class.forName(jdbc_driver); //load our JDBC driver
 		} catch (Throwable t) {
 			t.printStackTrace();
