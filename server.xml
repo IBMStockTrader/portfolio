@@ -17,9 +17,22 @@
 <server description="Portfolio server">
     <featureManager>
         <feature>microProfile-1.0</feature>
+        <feature>jdbc-4.1</feature>
+        <feature>jndi-1.0</feature>
     </featureManager>
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
+
+    <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
+        <jdbcDriver>
+            <library name="DB2" description="DB2 JDBC driver jar">
+                <file id="db2jcc4" name="/db2jcc4.jar"/>
+            </library>
+        </jdbcDriver>
+        <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+    </dataSource>
 
     <webApplication id="Portfolio" location="Portfolio.war" name="Portfolio" contextRoot="/portfolio"/>
 </server>
