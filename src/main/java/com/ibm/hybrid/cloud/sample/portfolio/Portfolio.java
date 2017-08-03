@@ -24,10 +24,12 @@ import java.net.URL;
 
 //JDBC 4.0 (JSR 221)
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import javax.annotation.Resource;
+import javax.annotation.Resource.AuthenticationType;
+import javax.sql.DataSource;
 
 //JSON-P 1.0 (JSR 353).  The replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
 import javax.json.Json;
@@ -35,6 +37,9 @@ import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
+
+//JNDI 1.0
+import javax.naming.InitialContext;
 
 //JAX-RS 2.0 (JSR 339)
 import javax.ws.rs.core.Application;
@@ -51,29 +56,13 @@ import javax.ws.rs.Path;
 
 @ApplicationPath("/")
 @Path("/")
-/** This version stores the Portfolios via JDBC to DB2.
- *  TODO: Should update to use a DataSource, and PreparedStatements.
+/** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider defined in your server.xml).
+ *  TODO: Should update to use PreparedStatements.
  */
 public class Portfolio extends Application {
 	private static final String   QUOTE_SERVICE = "http://stock-quote-service:9080/stock-quote";
 	private static final String LOYALTY_SERVICE = "http://loyalty-level-service:9080/loyalty-level";
-	private String                  jdbc_driver = null;
-	private String                     jdbc_url = null;
-	private String                     jdbc_id  = null;
-	private String                     jdbc_pwd = null;
-
-	public Portfolio() {
-		super();
-
-		try {
-			readSecrets();
-
-			//requires JDBC jar in war file's WEB-INF/lib directory
-			Class.forName(jdbc_driver); //load our JDBC driver
-		} catch (Throwable t) {
-			t.printStackTrace();
-		}
-	}
+	@Resource(name = "PortfolioDB", authenticationType = AuthenticationType.CONTAINER) private DataSource datasource = null;
 
 	@GET
 	@Path("/")
@@ -262,9 +251,27 @@ public class Portfolio extends Application {
 		return json;
 	}
 
+	private Throwable initialize() {
+		Throwable cause = null;
+		if (datasource == null) try {
+			System.out.println("Obtaining JDBC Datasource");
+
+			InitialContext ctx = new InitialContext();
+			datasource = (DataSource) ctx.lookup("jdbc/Portfolio/PortfolioDB");
+
+			System.out.println("JDBC Datasource successfully obtained!");
+		} catch (Throwable t) {
+			t.printStackTrace();
+			cause = t;
+		}
+		return cause;
+	}
+
 	private void invokeJDBC(String command) throws SQLException {
-		//Need to replace following line with use of a DataSource from Liberty
-		Connection connection = DriverManager.getConnection(jdbc_url, jdbc_id, jdbc_pwd);
+		Throwable cause = initialize();
+		if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", cause);
+
+		Connection connection = datasource.getConnection();
 		Statement statement = connection.createStatement();
 
 		statement.executeUpdate(command);
@@ -274,8 +281,10 @@ public class Portfolio extends Application {
 	}
 
 	private ResultSet invokeJDBCWithResults(String command) throws SQLException {
-		//Need to replace following line with use of a DataSource from Liberty
-		Connection connection = DriverManager.getConnection(jdbc_url, jdbc_id, jdbc_pwd);
+		Throwable cause = initialize();
+		if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", cause);
+
+		Connection connection = datasource.getConnection();
 		Statement statement = connection.createStatement();
 
 		statement.executeQuery(command);
@@ -292,52 +301,5 @@ public class Portfolio extends Application {
 		results.close();
 		statement.close();
 		connection.close();
-	}
-
-	private void readSecrets() {
-		/* Example kubernetes secret creation command:
-		   kubectl create secret generic db2 --from-literal=id=db2inst1
-		   --from-literal=pwd=password
-		   --from-literal=url=jdbc:db2://intended-otter-db2:50000/sample
-		   --from-literal=driver=com.ibm.db2.jcc.DB2Driver
-		 */
-
-		/* Example deployment yaml stanza:
-           spec:
-             containers:
-             - name: portfolio
-               image: kyleschlosser/portfolio:db2
-               env:
-                 - name: JDBC_DRIVER
-                   valueFrom:
-                     secretKeyRef:
-                       name: db2
-                       key: driver
-                 - name: JDBC_URL
-                   valueFrom:
-                     secretKeyRef:
-                       name: db2
-                       key: url
-                 - name: JDBC_ID
-                   valueFrom:
-                     secretKeyRef:
-                       name: db2
-                       key: id
-                 - name: JDBC_PASSWORD
-                   valueFrom:
-                     secretKeyRef:
-                       name: db2
-                       key: pwd
-               ports:
-                 - containerPort: 9080
-               imagePullPolicy: Always
-             imagePullSecrets:
-             - name: dockerhubsecret
-		 */
-
-		jdbc_driver = System.getenv("JDBC_DRIVER");
-		jdbc_url = System.getenv("JDBC_URL");
-		jdbc_id  = System.getenv("JDBC_ID");
-		jdbc_pwd = System.getenv("JDBC_PASSWORD");
 	}
 }
