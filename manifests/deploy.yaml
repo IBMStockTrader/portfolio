@@ -28,16 +28,21 @@ spec:
       - name: portfolio
         image: portfolio:latest
         env:
-          - name: JDBC_DRIVER
+          - name: JDBC_HOST
             valueFrom:
               secretKeyRef:
                 name: db2
-                key: driver
-          - name: JDBC_URL
+                key: host
+          - name: JDBC_PORT
             valueFrom:
               secretKeyRef:
                 name: db2
-                key: url
+                key: port
+          - name: JDBC_DB
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: db
           - name: JDBC_ID
             valueFrom:
               secretKeyRef:
