@@ -14,4 +14,6 @@
 
 FROM websphere-liberty:microProfile
 COPY server.xml /config/server.xml
+COPY db2jcc4.jar /db2jcc4.jar
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
+RUN installUtility install --acceptLicense defaultServer
