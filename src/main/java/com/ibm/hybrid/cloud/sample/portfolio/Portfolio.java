@@ -27,6 +27,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Enumeration;
+
 import javax.annotation.Resource;
 import javax.annotation.Resource.AuthenticationType;
 import javax.sql.DataSource;
@@ -40,9 +42,11 @@ import javax.json.JsonObjectBuilder;
 
 //JNDI 1.0
 import javax.naming.InitialContext;
+import javax.servlet.http.HttpServletRequest;
 
 //JAX-RS 2.0 (JSR 339)
 import javax.ws.rs.core.Application;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -56,7 +60,7 @@ import javax.ws.rs.Path;
 
 @ApplicationPath("/")
 @Path("/")
-/** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider defined in your server.xml).
+/** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
 public class Portfolio extends Application {
@@ -67,6 +71,7 @@ public class Portfolio extends Application {
 	@GET
 	@Path("/")
 	@Produces("application/json")
+//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonArray getPortfolios() throws IOException, SQLException {
 		JsonArrayBuilder builder = Json.createArrayBuilder();
 
@@ -91,6 +96,7 @@ public class Portfolio extends Application {
 	@POST
 	@Path("/{owner}")
 	@Produces("application/json")
+//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject createPortfolio(@PathParam("owner") String owner) throws SQLException {
 		JsonObject portfolio = null;
 		if (owner != null) {
@@ -113,7 +119,8 @@ public class Portfolio extends Application {
 	@GET
 	@Path("/{owner}")
 	@Produces("application/json")
-	public JsonObject getPortfolio(@PathParam("owner") String owner) throws IOException, SQLException {
+//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	public JsonObject getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		JsonObject newPortfolio = null;
 		JsonObject oldPortfolio = getPortfolioWithoutStocks(owner);
 		if (oldPortfolio != null) {
@@ -137,7 +144,7 @@ public class Portfolio extends Application {
 				stock.add("shares", shares);
 
 				//call the StockQuote microservice to get the current price of this stock
-				JsonObject quote = invokeREST("GET", QUOTE_SERVICE+"/"+symbol);
+				JsonObject quote = invokeREST(request, "GET", QUOTE_SERVICE+"/"+symbol);
 				String date = quote.getString("date");
 				stock.add("date", date);
 
@@ -146,7 +153,8 @@ public class Portfolio extends Application {
 
 				double total = shares * price;
 				stock.add("total", total);
-				overallTotal += total;
+				if (total != -1) //-1 is the marker for not being able to get the stock quote.  But don't actually add that value
+					overallTotal += total;
 
 				stocks.add(symbol, stock);
 
@@ -162,7 +170,7 @@ public class Portfolio extends Application {
 			String loyalty = null;
 			try {
 				//call the LoyaltyLevel microservice to get the current loyalty level of this portfolio
-				JsonObject loyaltyLevel = invokeREST("GET", LOYALTY_SERVICE+"?owner="+owner+"&loyalty="+oldLoyalty+"&total="+overallTotal);
+				JsonObject loyaltyLevel = invokeREST(request, "GET", LOYALTY_SERVICE+"?owner="+owner+"&loyalty="+oldLoyalty+"&total="+overallTotal);
 				loyalty = loyaltyLevel.getString("loyalty");
 				portfolio.add("loyalty", loyalty);
 			} catch (Throwable t) {
@@ -172,7 +180,10 @@ public class Portfolio extends Application {
 			invokeJDBC("UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
 
 			newPortfolio = portfolio.build();
+		} else {
+			newPortfolio = Json.createObjectBuilder().build(); //so we don't return null
 		}
+
 		return newPortfolio;
 	}
 
@@ -200,7 +211,8 @@ public class Portfolio extends Application {
 	@PUT
 	@Path("/{owner}")
 	@Produces("application/json")
-	public JsonObject updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares) throws IOException, SQLException {
+//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	public JsonObject updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		ResultSet results = invokeJDBCWithResults("SELECT shares FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
 
 		if (results.next()) { //row exists
@@ -221,12 +233,13 @@ public class Portfolio extends Application {
 
 		//getPortfolio will fill in the overall total and loyalty
 
-		return getPortfolio(owner);
+		return getPortfolio(owner, request);
 	}
 
 	@DELETE
 	@Path("/{owner}")
 	@Produces("application/json")
+//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		JsonObject portfolio = getPortfolioWithoutStocks(owner);
 
@@ -235,10 +248,13 @@ public class Portfolio extends Application {
 		return portfolio; //maybe this method should return void instead?
 	}
 
-	private static JsonObject invokeREST(String verb, String uri) throws IOException {
+	private static JsonObject invokeREST(HttpServletRequest request, String verb, String uri) throws IOException {
 		URL url = new URL(uri);
 
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+		copyFromRequest(conn, request); //forward headers (including cookies) from inbound request
+
 		conn.setRequestMethod(verb);
 		conn.setRequestProperty("Content-Type", "application/json");
 		conn.setDoOutput(true);
@@ -249,6 +265,18 @@ public class Portfolio extends Application {
 		stream.close();
 
 		return json;
+	}
+
+	//forward headers (including cookies) from inbound request
+	private static void copyFromRequest(HttpURLConnection conn, HttpServletRequest request) {
+		Enumeration<String> headers = request.getHeaderNames();
+		if (headers != null) {
+			while (headers.hasMoreElements()) {
+				String headerName = headers.nextElement(); //"Authorization" and "Cookie" are especially important headers
+				String headerValue = request.getHeader(headerName);
+				conn.setRequestProperty(headerName, headerValue); //odd it's called request property here, rather than header...
+			}
+		}
 	}
 
 	private Throwable initialize() {
