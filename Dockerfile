@@ -12,8 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-FROM websphere-liberty:microProfile
+FROM openliberty/open-liberty
 COPY server.xml /config/server.xml
 COPY db2jcc4.jar /db2jcc4.jar
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-RUN installUtility install --acceptLicense defaultServer
