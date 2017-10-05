@@ -26,6 +26,8 @@
 
     <keyStore id="defaultKeyStore" password="passw0rd"/>
 
+    <logging traceSpecification="*=info" consoleLogLevel="INFO"/>
+
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
         <jdbcDriver>
@@ -38,17 +40,17 @@
     </dataSource>
 
     <basicRegistry id="basic" realm="BasicRegistry">
-    	<user name="admin" password="admin"/>
-    	<user name="stock" password="trader"/>
-    	<user name="read" password="only"/>
-    	<user name="other" password="other"/>
-    	<group name="StockTrader">
-    		<member name="stock"/>
-    		<member name="admin"/>
-    	</group>
-    	<group name="StockViewer">
-    		<member name="read"/>
-    	</group>
+        <user name="admin" password="admin"/>
+        <user name="stock" password="trader"/>
+        <user name="read" password="only"/>
+        <user name="other" password="other"/>
+        <group name="StockTrader">
+            <member name="stock"/>
+            <member name="admin"/>
+        </group>
+        <group name="StockViewer">
+            <member name="read"/>
+        </group>
     </basicRegistry>
 
     <administrator-role>
