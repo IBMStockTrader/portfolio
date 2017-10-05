@@ -16,12 +16,15 @@
 
 <server description="Portfolio server">
     <featureManager>
-        <feature>microProfile-1.0</feature>
+        <feature>microProfile-1.2</feature>
         <feature>jdbc-4.1</feature>
         <feature>jndi-1.0</feature>
+        <feature>appSecurity-2.0</feature>
     </featureManager>
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
+
+    <keyStore id="defaultKeyStore" password="passw0rd"/>
 
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
@@ -33,6 +36,24 @@
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
+
+    <basicRegistry id="basic" realm="BasicRegistry">
+    	<user name="admin" password="admin"/>
+    	<user name="stock" password="trader"/>
+    	<user name="read" password="only"/>
+    	<user name="other" password="other"/>
+    	<group name="StockTrader">
+    		<member name="stock"/>
+    		<member name="admin"/>
+    	</group>
+    	<group name="StockViewer">
+    		<member name="read"/>
+    	</group>
+    </basicRegistry>
+
+    <administrator-role>
+    	<user>admin</user>
+    </administrator-role>
 
     <webApplication id="Portfolio" location="Portfolio.war" name="Portfolio" contextRoot="/portfolio"/>
 </server>
