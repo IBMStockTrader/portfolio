@@ -7,11 +7,11 @@
 		<realm-name>BasicRegistry</realm-name>
 	</login-config>
 	<security-role>
-		<description>User with read-only access to stock portfolios</description>
+		<description>Group with read-only access to stock portfolios</description>
 		<role-name>StockViewer</role-name>
 	</security-role>
 	<security-role>
-		<description>User with full access to stock portfolios</description>
+		<description>Group with full access to stock portfolios</description>
 		<role-name>StockTrader</role-name>
 	</security-role>
 	<security-constraint>
@@ -39,13 +39,11 @@
 			</description>
 			<url-pattern>/*</url-pattern>
 			<http-method>POST</http-method>
-
 			<http-method>PUT</http-method>
-
 			<http-method>DELETE</http-method>
-
 		</web-resource-collection>
 		<auth-constraint>
+			<description>Roles allowed to access read/write operations on portfolios</description>
 			<role-name>StockTrader</role-name>
 		</auth-constraint>
 	</security-constraint>
