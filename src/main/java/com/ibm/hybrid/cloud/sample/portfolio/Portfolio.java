@@ -143,23 +143,37 @@ public class Portfolio extends Application {
 				int shares = results.getInt("shares");
 				stock.add("shares", shares);
 
-				//call the StockQuote microservice to get the current price of this stock
-				JsonObject quote = invokeREST(request, "GET", QUOTE_SERVICE+"/"+symbol);
-				String date = quote.getString("date");
+				String date = null;
+				double price = 0;
+				double total = 0;
+				try {
+					//call the StockQuote microservice to get the current price of this stock
+					JsonObject quote = invokeREST(request, "GET", QUOTE_SERVICE+"/"+symbol);
+					date = quote.getString("date");
+
+					price = quote.getJsonNumber("price").doubleValue();
+
+					total = shares * price;
+
+					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
+					invokeJDBC("UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+					System.out.println("Unable to get fresh stock quote.  Using cached values instead");
+
+					date = results.getString("dateQuoted");
+					price = results.getDouble("price");
+					total = shares * price;
+				}
+
 				stock.add("date", date);
-
-				double price = quote.getJsonNumber("price").doubleValue();
 				stock.add("price", price);
-
-				double total = shares * price;
 				stock.add("total", total);
+
 				if (total != -1) //-1 is the marker for not being able to get the stock quote.  But don't actually add that value
 					overallTotal += total;
 
 				stocks.add(symbol, stock);
-
-				//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
-				invokeJDBC("UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 			}
 
 			releaseResults(results);
@@ -172,10 +186,12 @@ public class Portfolio extends Application {
 				//call the LoyaltyLevel microservice to get the current loyalty level of this portfolio
 				JsonObject loyaltyLevel = invokeREST(request, "GET", LOYALTY_SERVICE+"?owner="+owner+"&loyalty="+oldLoyalty+"&total="+overallTotal);
 				loyalty = loyaltyLevel.getString("loyalty");
-				portfolio.add("loyalty", loyalty);
-			} catch (Throwable t) {
-				t.printStackTrace();
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+				System.out.println("Unable to get loyalty level.  Using cached value instead");
+				loyalty = oldLoyalty;
 			}
+			portfolio.add("loyalty", loyalty);
 
 			invokeJDBC("UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
 
