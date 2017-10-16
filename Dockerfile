@@ -16,3 +16,5 @@ FROM openliberty/open-liberty:microProfile1
 COPY server.xml /config/server.xml
 COPY db2jcc4.jar /db2jcc4.jar
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
+COPY key.jks /output/resources/security/key.jks
+COPY ltpa.keys /output/resources/security/ltpa.keys
