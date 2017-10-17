@@ -285,13 +285,20 @@ public class Portfolio extends Application {
 
 	//forward headers (including cookies) from inbound request
 	private static void copyFromRequest(HttpURLConnection conn, HttpServletRequest request) {
+		System.out.println("portfolio: copyFromRequest");
 		Enumeration<String> headers = request.getHeaderNames();
 		if (headers != null) {
+			int count = 0;
 			while (headers.hasMoreElements()) {
 				String headerName = headers.nextElement(); //"Authorization" and "Cookie" are especially important headers
 				String headerValue = request.getHeader(headerName);
+				System.out.println(headerName+": "+headerValue);
 				conn.setRequestProperty(headerName, headerValue); //odd it's called request property here, rather than header...
+				count++;
 			}
+			if (count == 0) System.out.println("headers is empty");
+		} else {
+			System.out.println("headers is null");
 		}
 	}
 
