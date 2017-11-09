@@ -23,6 +23,7 @@ spec:
     metadata:
       labels:
         app: portfolio
+        solution: stock-trader
     spec:
       containers:
       - name: portfolio
