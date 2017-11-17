@@ -30,7 +30,9 @@
 
     <logging traceSpecification="*=info" consoleLogLevel="INFO"/>
 
+<!--
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
+-->
 
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
