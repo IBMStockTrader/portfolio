@@ -21,6 +21,7 @@
         <feature>jndi-1.0</feature>
         <feature>appSecurity-2.0</feature>
         <feature>ldapRegistry-3.0</feature>
+        <feature>logstashCollector-1.0</feature>
     </featureManager>
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
@@ -28,6 +29,8 @@
     <keyStore id="defaultKeyStore" password="passw0rd"/>
 
     <logging traceSpecification="*=info" consoleLogLevel="INFO"/>
+
+    <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
 
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
