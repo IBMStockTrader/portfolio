@@ -259,7 +259,7 @@ public class Portfolio extends Application {
 
 		releaseResults(results);
 
-		logger.finer("Returning +"portfolio.toString());
+		logger.finer("Returning "+portfolio.toString());
 		return portfolio;
 	}
 
@@ -305,13 +305,13 @@ public class Portfolio extends Application {
 
 		logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
 		invokeJDBC("DELETE FROM Portfolio WHERE owner = '"+owner+"'");
-		logger.fine("Successfully deleted portfolio for +"owner);
+		logger.fine("Successfully deleted portfolio for "+owner);
 
 		return portfolio; //maybe this method should return void instead?
 	}
 
 	private static JsonObject invokeREST(HttpServletRequest request, String verb, String uri) throws IOException {
-		logger.fine("Preparing call to "verb+" "+uri);
+		logger.fine("Preparing call to "+verb+" "+uri);
 		URL url = new URL(uri);
 
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
