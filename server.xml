@@ -16,22 +16,26 @@
 
 <server description="Portfolio server">
     <featureManager>
-        <feature>microProfile-1.2</feature>
+        <feature>microProfile-1.2</feature> <!-- defines mpJwt-1.0, among others -->
         <feature>jdbc-4.1</feature>
         <feature>jndi-1.0</feature>
         <feature>appSecurity-2.0</feature>
-        
         <feature>openapi-3.0</feature>
         <feature>logstashCollector-1.0</feature>
     </featureManager>
-    <mpJwt audiences="" groupNameAttribute="groups" id="myMpJwt" issuer="http://jwtdemo.ibm.com, https://localhost:19443/JwtToken"/>
-     
+
+    <logging traceSpecification="*=info" consoleLogLevel="INFO"/>
+
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
 
-    <keyStore id="defaultKeyStore" password="passw0rd"/>
+    <keyStore id="defaultKeyStore" password="passw0rd" type="jks"
+         location="${server.config.dir}/resources/security/key.jks" />
 
-    <logging traceSpecification="*=info:com.ibm.ws.security.*=all" consoleLogLevel="INFO" traceFileName="trace.log" maxFileSize="20" maxFiles="10"/>
-    
+    <sslDefault sslRef="RpSSLConfig" />
+
+    <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" />
+
+    <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default"/>
 
 <!--
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
@@ -67,10 +71,9 @@
     <administrator-role>
     	<user>admin</user>
     </administrator-role>
--->
 
-   
     <ltpa expiration="1h"/>
+-->
 
     <webAppSecurity allowFailOverToBasicAuth="true" displayAuthenticationRealm="true" logoutOnHttpSessionExpire="true"
         webAlwaysLogin="true" preserveFullyQualifiedReferrerUrl="true" trackLoggedOutSSOCookies="true" ssoCookieName="StockTraderSSO"
@@ -79,7 +82,7 @@
     <webApplication id="Portfolio" name="Portfolio" location="Portfolio.war" contextRoot="/portfolio">
         <application-bnd>
             <security-role id="StockTrader" name="StockTrader">
-                <special-subject type="ALL_AUTHENTICATED_USERS" id="bluePagesUsers"/>
+                <special-subject type="ALL_AUTHENTICATED_USERS" id="IBMid"/>
             </security-role>
         </application-bnd>
     </webApplication>
