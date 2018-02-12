@@ -41,7 +41,4 @@ The above REST call would also add a row to the Stocks table via a SQL statement
 and would update the corresponding row in the Portfolio table via a SQL statement like
 `UPDATE Portfolio SET total = 19120.35, loyalty = 'Bronze' WHERE owner = 'John'`.
 
-Note that the **db2jcc4.jar** file needs to be in the war file's 'WEB-INF/lib' directory.  As a to-do, need
-to update the code to use a Liberty datasource, and make corresponding updates to the server.xml to define a
-*JDBC* provider for **DB2** and to make that datasource available via *JNDI* lookup.  For now, this service
-just talks to *JDBC* the **Java SE** way instead.
+The code should work with any *JDBC* provider.  It has been tested with **DB2** and with **Derby**.  Changing providers simply means updating the *Dockerfile* to copy the *JDBC* jar file into the Docker image, and updating the *server.xml* to reference it and specify and database-specific settings.  No *Java* code changes are necessary when changing *JDBC* providers.  The database can either be another pod in the same Kubernetes environment, or it can be running on "bare metal" in a traditional on-premises environment.  Endpoint and credential info is specified in the Kubernetes secret and made available as environment variables to the server.xml.  See the *deploy.yaml* for details.
