@@ -18,7 +18,7 @@ kind: Deployment
 metadata:
   name: portfolio
 spec:
-  replicas: 4
+  replicas: 1
   template:
     metadata:
       labels:
@@ -27,7 +27,9 @@ spec:
     spec:
       containers:
       - name: portfolio
-        image: portfolio:latest
+        image: portfolio:latest # Microservice Builder
+#       image: mycluster.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
+#       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Container Service
         env:
           - name: JDBC_HOST
             valueFrom:
@@ -54,8 +56,19 @@ spec:
               secretKeyRef:
                 name: db2
                 key: pwd
+          - name: JWT_AUDIENCE
+            valueFrom:
+              secretKeyRef:
+                name: jwt 
+                key: audience
+          - name: JWT_ISSUER
+            valueFrom:
+              secretKeyRef:
+                name: jwt
+                key: issuer
         ports:
           - containerPort: 9080
+          - containerPort: 9443
         imagePullPolicy: Always
 ---
 #Deploy the service
@@ -68,8 +81,14 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - port: 9080
-#     nodePort: 31001
+    - name: http
+      protocol: TCP
+      port: 9080
+      targetPort: 9080
+    - name: https
+      protocol: TCP
+      port: 9443
+      targetPort: 9443
   selector:
     app: portfolio
 ---   
@@ -77,14 +96,15 @@ spec:
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-# annotations:
-#   ingress.kubernetes.io/rewrite-target: /portfolio
   name: portfolio-ingress
+  annotations:
+    kubernetes.io/ingress.class: "istio"
 spec:
   rules:
   - http:
       paths:
-      - path: /portfolio
+      - path: /portfolio/.*
         backend:
           serviceName: portfolio-service
-          servicePort: 9080
+          servicePort: 9443
+
