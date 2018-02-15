@@ -18,6 +18,6 @@ FROM websphere-liberty:microProfile
 COPY server.xml /config/server.xml
 COPY db2jcc4.jar /db2jcc4.jar
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-COPY key.jks /output/resources/security/key.jks
-COPY ltpa.keys /output/resources/security/ltpa.keys
+COPY key.jks /config/resources/security/key.jks
+# COPY ltpa.keys /config/resources/security/ltpa.keys
 RUN installUtility install --acceptLicense defaultServer
