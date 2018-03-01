@@ -3,8 +3,8 @@
 	<display-name>Portfolio</display-name>
 	<description>Portfolio microservice from the Stock Trader application</description>
 	<login-config>
-		<auth-method>BASIC</auth-method>
-		<realm-name>BluePages</realm-name>
+		<auth-method>MP-JWT</auth-method>
+		<realm-name>MP-JWT</realm-name>
 	</login-config>
 	<security-role>
 		<description>Group with read-only access to stock portfolios</description>
