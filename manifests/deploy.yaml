@@ -30,6 +30,7 @@ spec:
         image: portfolio:latest # Microservice Builder
 #       image: mycluster.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
 #       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Container Service
+#       image: ibmstocktrader/portfolio:latest # Docker Hub
         env:
           - name: JDBC_HOST
             valueFrom:
@@ -56,6 +57,61 @@ spec:
               secretKeyRef:
                 name: db2
                 key: pwd
+          - name: MQ_ID
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: id
+          - name: MQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: pwd
+          - name: MQ_HOST
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: host
+          - name: MQ_PORT
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: port
+          - name: MQ_CHANNEL
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: channel
+          - name: MQ_QUEUE_MANAGER
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: queue-manager
+          - name: MQ_QUEUE
+            valueFrom:
+               secretKeyRef:
+                 name: mq   
+                 key: queue
+          - name: WATSON_URL
+            valueFrom:
+              secretKeyRef:
+                name: watson
+                key: url
+          - name: WATSON_ID
+            valueFrom:
+              secretKeyRef:
+                name: watson
+                key: id
+          - name: WATSON_PWD
+            valueFrom:
+              secretKeyRef:
+                name: watson
+                key: pwd
+          - name: ODM_URL
+            valueFrom:
+              secretKeyRef:
+                name: odm
+                key: url
           - name: JWT_AUDIENCE
             valueFrom:
               secretKeyRef:
