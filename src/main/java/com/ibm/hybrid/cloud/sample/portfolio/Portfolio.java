@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Base64;
 import java.util.Enumeration;
 
 //Logging (JSR 47)
@@ -39,7 +40,6 @@ import javax.sql.DataSource;
 
 //Transactions
 import javax.annotation.ManagedBean;
-import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 
@@ -93,7 +93,6 @@ public class Portfolio extends Application {
 	private static Logger logger = Logger.getLogger(Portfolio.class.getName());
 
 	private static final String QUOTE_SERVICE        = "http://stock-quote-service:9080/stock-quote";
-	private static final String WATSON_TONE_ANALYZER = "https://watson-api-explorer.mybluemix.net/tone-analyzer/api/v3/tone?version=2017-09-21&sentences=false";
 
 	private static final String NOTIFICATION_Q       = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF     = "jms/Portfolio/NotificationQueueConnectionFactory";
@@ -112,6 +111,9 @@ public class Portfolio extends Application {
 	private DataSource datasource = null;
 
 	private String odmService = null;
+	private String watsonService = null;
+	private String watsonId = null;
+	private String watsonPwd = null;
 	private boolean initialized = false;
 
 
@@ -228,7 +230,7 @@ public class Portfolio extends Application {
 				try {
 					//call the StockQuote microservice to get the current price of this stock
 					logger.info("Calling stock-quote microservice for "+symbol);
-					JsonObject quote = invokeREST(request, "GET", QUOTE_SERVICE+"/"+symbol, null);
+					JsonObject quote = invokeREST(request, "GET", QUOTE_SERVICE+"/"+symbol, null, null, null);
 
 					date = quote.getString("date");
 					price = quote.getJsonNumber("price").doubleValue();
@@ -298,7 +300,7 @@ public class Portfolio extends Application {
 
 			double total = results.getDouble("total");
 			String loyalty = results.getString("loyalty");
-			double balance = results.getInt("balance");
+			double balance = results.getDouble("balance");
 			double commissions = results.getDouble("commissions");
 			int free = results.getInt("free");
 			String sentiment = results.getString("sentiment");
@@ -330,8 +332,8 @@ public class Portfolio extends Application {
 	public JsonObject updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner);
 
-		logger.fine("Running following SQL: SELECT shares FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
-		ResultSet results = invokeJDBCWithResults("SELECT shares FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+		ResultSet results = invokeJDBCWithResults("SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
 
 		if (results.next()) { //row exists
 			int oldShares = results.getInt("shares");
@@ -380,29 +382,40 @@ public class Portfolio extends Application {
 	@Produces("application/json")
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject submitFeedback(@PathParam("owner") String owner, JsonObject input) throws IOException, SQLException {
-		boolean angry = false;
-		String sentiment = null;
+		String sentiment = "Unknown";
+		try {
+			initialize();
+		} catch (NamingException ne) {
+			logger.warning("Error occurred during initialization");
+		}
+
 		logger.info("Calling Watson Tone Analyzer");
-		JsonObject result = invokeREST(null, "POST", WATSON_TONE_ANALYZER, input.toString());
+		JsonObject result = invokeREST(null, "POST", watsonService, input.toString(), watsonId, watsonPwd);
 		if (result!=null) {
-			logger.info("Result from Watson Tone Analyzer:"+result.toString());
+			logger.info("Result from Watson Tone Analyzer: "+result.toString());
 			JsonObject document_tone = result.getJsonObject("document_tone");
 			if (document_tone!=null) {
 				JsonArray tones = (JsonArray) document_tone.get("tones");
+				double score = 0.0;
 				for (int index=0; index<tones.size(); index++) {
 					JsonObject tone = (JsonObject) tones.get(index);
-					sentiment = tone.getString("tone_name");
-					if ("Anger".equalsIgnoreCase(sentiment)) angry = true;
+					double newScore = tone.getJsonNumber("score").doubleValue();
+					if (newScore > score) { //we might get back multiple tones; if so, go with the one with the highest score
+						sentiment = tone.getString("tone_name");
+						score = newScore;
+					}
 				}
+			} else {
+				logger.warning("Failed to get back document_tone");
 			}
 		}
 
 		int freeTrades = 1;
 		String message = "Thanks for providing feedback.  Have a free trade on us!";
-		if (angry) {
+
+		if ("Anger".equalsIgnoreCase(sentiment)) {
 			logger.info("Tone is angry");
 			freeTrades = 3;
-			sentiment = "Angry";
 			message = "We're sorry you are upset.  Have three free trades on us!";
 		}
 
@@ -433,7 +446,7 @@ public class Portfolio extends Application {
 
 			//call the LoyaltyLevel business rule to get the current loyalty level of this portfolio
 			logger.info("Calling loyalty-level ODM business rule for "+owner);
-			JsonObject loyaltyDecision = invokeREST(request, "POST", odmService, payloadString);
+			JsonObject loyaltyDecision = invokeREST(request, "POST", odmService, payloadString, null, null);
 			logger.info(loyaltyDecision.toString());
 			JsonObject loyaltyLevel = loyaltyDecision.getJsonObject("theLoyaltyDecision");
 			if (loyaltyLevel != null) {
@@ -476,7 +489,7 @@ public class Portfolio extends Application {
 		return loyalty;
 	}
 
-	private static JsonObject invokeREST(HttpServletRequest request, String verb, String uri, String payload) throws IOException {
+	private static JsonObject invokeREST(HttpServletRequest request, String verb, String uri, String payload, String user, String password) throws IOException {
 		logger.info("Preparing call to "+verb+" "+uri);
 		URL url = new URL(uri);
 
@@ -487,6 +500,14 @@ public class Portfolio extends Application {
 		conn.setRequestMethod(verb);
 		conn.setRequestProperty("Content-Type", "application/json");
 		conn.setDoOutput(true);
+
+		if ((user != null) && (password != null)) { //send via basic-auth
+			logger.info("Setting credentials on REST call");
+			String credentials = user + ":" + password;
+			String authorization = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+			conn.setRequestProperty("Authorization", authorization);
+			logger.info("Successfully set credentials");
+		}
 
 		if (payload != null) {
 			logger.info("Writing JSON to body of REST call:"+payload);
@@ -536,23 +557,33 @@ public class Portfolio extends Application {
 			context = new InitialContext();
 			datasource = (DataSource) context.lookup("jdbc/Portfolio/PortfolioDB");
 
-			logger.info("JDBC Datasource successfully obtained!");
+			logger.info("JDBC Datasource successfully obtained!"); //exception would have occurred otherwise
 
 			//lookup our JMS objects
 			logger.info("Looking up our JMS resources");
 			queueCF = (QueueConnectionFactory) context.lookup(NOTIFICATION_QCF);
 			queue = (Queue) context.lookup(NOTIFICATION_Q);
 
-			initialized = true;
-			logger.info("JMS Initialization completed successfully!");
+			logger.info("JMS Initialization completed successfully!"); //exception would have occurred otherwise
+
+			logger.info("Reading the Watson environment variables"); //TODO: replace System.getenv with mpConfig
+			watsonService = System.getenv("WATSON_URL");
+			watsonId = System.getenv("WATSON_ID");
+			watsonPwd = System.getenv("WATSON_PWD");
+			if (watsonService != null) {
+				logger.info("Watson initialization completed successfully!");
+			} else {
+				logger.warning("WATSON_URL is null");
+			}
 
 			logger.fine("Getting ODM url");
-			odmService = System.getenv("ODM_URL"); //TODO: replace with mpConfig
+			odmService = System.getenv("ODM_URL");
 			if (odmService != null) {
 				logger.info("Initialization complete");
 			} else {
 				logger.warning("ODM_URL is null");
 			}
+			initialized = true;
 		}
 	}
 
