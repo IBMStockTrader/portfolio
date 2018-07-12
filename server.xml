@@ -24,12 +24,13 @@
         <feature>appSecurity-2.0</feature>
         <feature>managedBeans-1.0</feature>
         <feature>logstashCollector-1.0</feature>
+        <feature>openapi-3.0</feature>
     </featureManager>
 
     <logging traceSpecification="*=info" consoleLogLevel="INFO"/>
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
-    
+
     <keyStore id="defaultKeyStore" location="/config/resources/security/key.jks" password="passw0rd"/>
 
     <sslDefault sslRef="RpSSLConfig" />
@@ -58,9 +59,9 @@
     <resourceAdapter id="mq" location="/config/wmq.jmsra.rar"/>
 
     <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory" containerAuthDataRef="MQ-Credentials">
-        <properties.mq 
+        <properties.mq
             transportType="CLIENT"
-            hostName="${env.MQ_HOST}" 
+            hostName="${env.MQ_HOST}"
             port="${env.MQ_PORT}"
             channel="${env.MQ_CHANNEL}"
             queueManager="${env.MQ_QUEUE_MANAGER}"/>
