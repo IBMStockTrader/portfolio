@@ -21,6 +21,11 @@ public class PortfolioModel {
     private String owner;
     private double total;
     private String loyalty;
+    private double balance;
+    private double commissions;
+    private double nextCommission;
+    private int free;
+    private String sentiment;
     private Map<String, StockModel> stocks;
 
     public PortfolioModel() {
@@ -55,6 +60,46 @@ public class PortfolioModel {
 
     public void setLoyalty(String loyalty) {
         this.loyalty = loyalty;
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
+    public double getCommissions() {
+        return commissions;
+    }
+
+    public void setCommissions(double commissions) {
+        this.commissions = commissions;
+    }
+
+    public double getNextCommission() {
+        return nextCommission;
+    }
+
+    public void setNextCommission(double nextCommission) {
+        this.nextCommission = nextCommission;
+    }
+
+    public int getFree() {
+        return free;
+    }
+
+    public void setFree(int free) {
+        this.free = free;
+    }
+
+    public String getSentiment() {
+        return sentiment;
+    }
+
+    public void setSentiment(String sentiment) {
+        this.sentiment = sentiment;
     }
 
     public Map<String, StockModel> getStocks() {

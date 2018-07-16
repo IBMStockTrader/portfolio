@@ -19,6 +19,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public class StockModel {
     private String symbol;
     private int shares;
+    private double commission;
     private String date;
     private double price;
     private double total;
@@ -37,6 +38,12 @@ public class StockModel {
     }
     public double getPrice() {
         return price;
+    }
+    public void setCommission(double commission) {
+        this.commission = commission;
+    }
+    public double getCommission() {
+        return commission;
     }
     public void setPrice(double price) {
         this.price = price;
