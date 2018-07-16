@@ -101,7 +101,9 @@ local.properties
 clientdb.xml
 .cache-main
 
-target/ 
+target/
 
 .gradle/
 build/
+
+temp.java

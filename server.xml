@@ -24,7 +24,6 @@
         <feature>appSecurity-2.0</feature>
         <feature>managedBeans-1.0</feature>
         <feature>logstashCollector-1.0</feature>
-        <feature>openapi-3.0</feature>
     </featureManager>
 
     <logging traceSpecification="*=info" consoleLogLevel="INFO"/>
