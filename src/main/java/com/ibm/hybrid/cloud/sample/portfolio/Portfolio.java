@@ -132,9 +132,9 @@ public class Portfolio extends Application {
 	@GET
 	@Path("/")
 	@Produces("application/json")
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-  @Operation(summary="Get portfolios", description="gets summary data for all portfolios")
+	@Operation(summary="Get portfolios", description="gets summary data for all portfolios")
 	@APIResponse(responseCode="200", description="Get portfolios", content=@Content(schema=@Schema(type=SchemaType.ARRAY, implementation=PortfolioModel.class)))
+	//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public List<PortfolioModel> getPortfolios() throws IOException, SQLException {
 
 		List<PortfolioModel> portfolios = new ArrayList<>();
@@ -152,7 +152,7 @@ public class Portfolio extends Application {
 				String loyalty = results.getString("loyalty");
 
 				PortfolioModel portfolio = new PortfolioModel();
-   			portfolio.setOwner(owner);
+				portfolio.setOwner(owner);
 				portfolio.setTotal(total);
 				portfolio.setLoyalty(loyalty);
 
@@ -175,9 +175,9 @@ public class Portfolio extends Application {
 	@Path("/{owner}")
 	@Produces("application/json")
 	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-  @Operation(summary="Create a portfolio", description="creates a new portfolio for the specified owner")
+	@Operation(summary="Create a portfolio", description="creates a new portfolio for the specified owner")
 	@APIResponse(responseCode="200", description="Portfolio created", content=@Content(schema=@Schema(implementation=PortfolioModel.class)))
+	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public PortfolioModel createPortfolio(@PathParam("owner") String owner) throws SQLException {
 		PortfolioModel portfolio = null;
 		if (owner != null) {
@@ -205,9 +205,9 @@ public class Portfolio extends Application {
 	@Path("/{owner}")
 	@Produces("application/json")
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-  @Operation(summary="Get a portfolio", description="gets details for the specified owner")
+	@Operation(summary="Get a portfolio", description="gets details for the specified owner")
 	@APIResponse(responseCode="200", description="Owner' portfolio", content=@Content(schema=@Schema(implementation=PortfolioModel.class)))
+	//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public PortfolioModel getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		PortfolioModel newPortfolio = null;
 		PortfolioModel oldPortfolio = getPortfolioWithoutStocks(owner);
@@ -347,9 +347,9 @@ public class Portfolio extends Application {
 	@Path("/{owner}")
 	@Produces("application/json")
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-  @Operation(summary="Update a portfolio", description="updates the portfolio for the specified owner (by adding a stock)")
+	@Operation(summary="Update a portfolio", description="updates the portfolio for the specified owner (by adding a stock)")
 	@APIResponse(responseCode="200", description="Update a portfolio", content=@Content(schema=@Schema(implementation=PortfolioModel.class)))
+	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public PortfolioModel updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner);
 
@@ -386,9 +386,9 @@ public class Portfolio extends Application {
 	@DELETE
 	@Path("/{owner}")
 	@Produces("application/json")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-  @Operation(summary="Delete a portfolio", description="removes the portfolio for the specified owner")
+	@Operation(summary="Delete a portfolio", description="removes the portfolio for the specified owner")
 	@APIResponse(responseCode="200", description="Deleted portfolio", content=@Content(schema=@Schema(implementation=PortfolioModel.class)))
+	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public PortfolioModel deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		PortfolioModel portfolio = getPortfolioWithoutStocks(owner);
 
@@ -403,9 +403,9 @@ public class Portfolio extends Application {
 	@Path("/{owner}/feedback")
 	@Consumes("application/json")
 	@Produces("application/json")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-  @Operation(summary="Submit feedback", description="get feedback with sentiment, free trades information and message")
+	@Operation(summary="Submit feedback", description="get feedback with sentiment, free trades information and message")
 	@APIResponse(responseCode="200", description="Submit feedback", content=@Content(schema=@Schema(implementation=FeedbackResponseModel.class)))
+	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public FeedbackResponseModel submitFeedback(@PathParam("owner") String owner, JsonObject input) throws IOException, SQLException {
 		String sentiment = "Unknown";
 		try {
