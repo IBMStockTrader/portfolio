@@ -34,6 +34,96 @@ spec:
             value: "{{ .Values.service.servicePort }}"
           - name: APPLICATION_NAME
             value: "{{ .Release.Name }}"
+          - name: JDBC_HOST
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: host
+          - name: JDBC_PORT
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: port
+          - name: JDBC_DB
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: db
+          - name: JDBC_ID
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: id
+          - name: JDBC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: pwd
+          - name: MQ_ID
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: id
+          - name: MQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: pwd
+          - name: MQ_HOST
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: host
+          - name: MQ_PORT
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: port
+          - name: MQ_CHANNEL
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: channel
+          - name: MQ_QUEUE_MANAGER
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: queue-manager
+          - name: MQ_QUEUE
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: queue
+          - name: WATSON_URL
+            valueFrom:
+              secretKeyRef:
+                name: watson
+                key: url
+          - name: WATSON_ID
+            valueFrom:
+              secretKeyRef:
+                name: watson
+                key: id
+          - name: WATSON_PWD
+            valueFrom:
+              secretKeyRef:
+                name: watson
+                key: pwd
+          - name: ODM_URL
+            valueFrom:
+              secretKeyRef:
+                name: odm
+                key: url
+          - name: JWT_AUDIENCE
+            valueFrom:
+              secretKeyRef:
+                name: jwt
+                key: audience
+          - name: JWT_ISSUER
+            valueFrom:
+              secretKeyRef:
+                name: jwt
+                key: issuer
 {{- if .Values.generatedBindings.enabled }}
 {{.Files.Get "bindings.yaml" | indent 10 }}
 {{- end }}
