@@ -36,6 +36,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import javax.annotation.security.RolesAllowed;
 import javax.sql.DataSource;
 
 //Transactions
@@ -85,7 +86,9 @@ import javax.ws.rs.Path;
 
 @ApplicationPath("/")
 @Path("/")
-@ManagedBean //enable interceptors like @Transactional (note you need managedBeans-1.0 server.xml feature, and WEB-INF/beans.xml in war)
+@ManagedBean("portfolio") //enable interceptors like @Transactional (note you need managedBeans-1.0 server.xml feature,
+// and
+// WEB-INF/beans.xml in war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
@@ -120,7 +123,7 @@ public class Portfolio extends Application {
 	@GET
 	@Path("/")
 	@Produces("application/json")
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonArray getPortfolios() throws SQLException {
 		JsonArrayBuilder builder = Json.createArrayBuilder();
 		int count = 0;
@@ -160,7 +163,7 @@ public class Portfolio extends Application {
 	@Path("/{owner}")
 	@Produces("application/json")
 	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject createPortfolio(@PathParam("owner") String owner) throws SQLException {
 		JsonObject portfolio = null;
 		if (owner != null) {
@@ -192,7 +195,7 @@ public class Portfolio extends Application {
 	@Path("/{owner}")
 	@Produces("application/json")
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		JsonObject newPortfolio = null;
 
@@ -328,7 +331,7 @@ public class Portfolio extends Application {
 	@Path("/{owner}")
 	@Produces("application/json")
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner);
 
@@ -365,7 +368,7 @@ public class Portfolio extends Application {
 	@DELETE
 	@Path("/{owner}")
 	@Produces("application/json")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		JsonObject portfolio = getPortfolioWithoutStocks(owner);
 
@@ -380,7 +383,7 @@ public class Portfolio extends Application {
 	@Path("/{owner}/feedback")
 	@Consumes("application/json")
 	@Produces("application/json")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public JsonObject submitFeedback(@PathParam("owner") String owner, JsonObject input) throws IOException, SQLException {
 		String sentiment = "Unknown";
 		try {

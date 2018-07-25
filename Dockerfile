@@ -15,11 +15,18 @@
 # FROM openliberty/open-liberty:microProfile1
 FROM websphere-liberty:microProfile
 
-COPY server.xml /config/server.xml
-COPY db2jcc4.jar /config/db2jcc4.jar
-COPY wmq.jmsra.rar /config/wmq.jmsra.rar
-COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-COPY key.jks /config/resources/security/key.jks
-COPY keystore.xml /config/configDropins/defaults/keystore.xml
-# COPY ltpa.keys /config/resources/security/ltpa.keys
+COPY /target/liberty/wlp/usr/servers/defaultServer /config/
+
+## Copy in portfolio prereqs:
+COPY lib/db2jcc4.jar /config/db2jcc4.jar
+COPY lib/wmq.jmsra.rar /config/wmq.jmsra.rar
+
 RUN installUtility install --acceptLicense defaultServer
+# Upgrade to production license if URL to JAR provided
+ARG LICENSE_JAR_URL
+RUN \
+  if [ $LICENSE_JAR_URL ]; then \
+    wget $LICENSE_JAR_URL -O /tmp/license.jar \
+    && java -jar /tmp/license.jar -acceptLicense /opt/ibm \
+    && rm /tmp/license.jar; \
+  fi

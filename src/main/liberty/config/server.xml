@@ -26,63 +26,73 @@
         <feature>logstashCollector-1.0</feature>
     </featureManager>
 
-    <logging traceSpecification="*=info" consoleLogLevel="INFO"/>
+    <logging traceSpecification="EJBContainer=all:Injection=all:JCDI=all" consoleLogLevel="INFO" messageFileName="messages.log"/>
 
-    <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
-    
+    <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"
+                  id="defaultHttpEndpoint" host="*"/>
+
+    <!-- Automatically expand WAR files and EAR files -->
+    <applicationManager autoExpand="true"/>
+
+
     <keyStore id="defaultKeyStore" location="/config/resources/security/key.jks" password="passw0rd"/>
 
-    <sslDefault sslRef="RpSSLConfig" />
+    <sslDefault sslRef="RpSSLConfig"/>
 
-    <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" />
+    <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore"/>
 
-    <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default" ignoreApplicationAuthMethod="false"/>
+    <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default"
+           ignoreApplicationAuthMethod="false"/>
 
-<!--
-    <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
--->
+    <!--
+        <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
+    -->
 
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
-    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections"
+                isolationLevel="TRANSACTION_READ_COMMITTED">
         <jdbcDriver>
             <library name="DB2" description="DB2 JDBC driver jar">
                 <file id="db2jcc4" name="/config/db2jcc4.jar"/>
             </library>
         </jdbcDriver>
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
-            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+                            user="${env.JDBC_ID}"
+                            password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
-
+ 
     <authData id="MQ-Credentials" user="${env.MQ_ID}" password="${env.MQ_PASSWORD}"></authData>
 
     <resourceAdapter id="mq" location="/config/wmq.jmsra.rar"/>
 
-    <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory" containerAuthDataRef="MQ-Credentials">
-        <properties.mq 
-            transportType="CLIENT"
-            hostName="${env.MQ_HOST}" 
-            port="${env.MQ_PORT}"
-            channel="${env.MQ_CHANNEL}"
-            queueManager="${env.MQ_QUEUE_MANAGER}"/>
+    <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory"
+                               containerAuthDataRef="MQ-Credentials">
+        <properties.mq
+                transportType="CLIENT"
+                hostName="${env.MQ_HOST}"
+                port="${env.MQ_PORT}"
+                channel="${env.MQ_CHANNEL}"
+                queueManager="${env.MQ_QUEUE_MANAGER}"/>
     </jmsQueueConnectionFactory>
     <jmsQueue id="NotificationQ" jndiName="jms/Portfolio/NotificationQueue">
         <properties.mq baseQueueName="${env.MQ_QUEUE}" baseQueueManagerName="${env.MQ_QUEUE_MANAGER}"/>
     </jmsQueue>
+    
 
-<!-- Use this to be a client to Liberty's built-in JMS provider (running in a messaging-engine pod) instead of MQ
-    <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory">
-        <properties.wasJms remoteServerAddress="messaging-engine-service:7276:BootstrapBasicMessaging"/>
-    </jmsQueueConnectionFactory>
-    <jmsQueue id="NotificationQ" jndiName="jms/Portfolio/NotificationQueue">
-        <properties.wasJms queueName="NotificationQ"/>
-    </jmsQueue>
--->
+    <!-- Use this to be a client to Liberty's built-in JMS provider (running in a messaging-engine pod) instead of MQ
+        <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory">
+            <properties.wasJms remoteServerAddress="messaging-engine-service:7276:BootstrapBasicMessaging"/>
+        </jmsQueueConnectionFactory>
+        <jmsQueue id="NotificationQ" jndiName="jms/Portfolio/NotificationQueue">
+            <properties.wasJms queueName="NotificationQ"/>
+        </jmsQueue>
+    -->
 
     <basicRegistry id="basic" realm="BasicRegistry">
         <user name="admin" password="admin"/>
         <user name="stock" password="trader"/>
         <user name="debug" password="debug"/>
-        <user name="read"  password="only"/>
+        <user name="read" password="only"/>
         <user name="other" password="other"/>
         <user name="jalcorn@us.ibm.com" password="test"/>
         <group name="StockTrader">
@@ -96,20 +106,22 @@
     </basicRegistry>
 
     <administrator-role>
-    	<user>admin</user>
+        <user>admin</user>
     </administrator-role>
 
     <ltpa expiration="1h"/>
 
     <webAppSecurity allowFailOverToBasicAuth="true" displayAuthenticationRealm="true" logoutOnHttpSessionExpire="true"
-        webAlwaysLogin="true" preserveFullyQualifiedReferrerUrl="true" trackLoggedOutSSOCookies="true" ssoCookieName="StockTraderSSO"
-        useOnlyCustomCookieName="true" ssoUseDomainFromURL="true"/>
+                    webAlwaysLogin="true" preserveFullyQualifiedReferrerUrl="true" trackLoggedOutSSOCookies="true"
+                    ssoCookieName="StockTraderSSO"
+                    useOnlyCustomCookieName="true" ssoUseDomainFromURL="true"/>
 
-    <webApplication id="Portfolio" name="Portfolio" location="Portfolio.war" contextRoot="/portfolio">
+    <webApplication name="portfolio" location="${app.location}">
         <application-bnd>
             <security-role id="StockTrader" name="StockTrader">
                 <special-subject type="ALL_AUTHENTICATED_USERS" id="IBMid"/>
             </security-role>
         </application-bnd>
     </webApplication>
+
 </server>
