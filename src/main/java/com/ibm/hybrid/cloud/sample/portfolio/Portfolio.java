@@ -82,6 +82,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.Path;
 
+import javax.inject.Inject;
+import javax.inject.Provider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 
 @ApplicationPath("/")
 @Path("/")
@@ -92,10 +96,17 @@ import javax.ws.rs.Path;
 public class Portfolio extends Application {
 	private static Logger logger = Logger.getLogger(Portfolio.class.getName());
 
-	private static final String QUOTE_SERVICE        = "http://stock-quote-service:9080/stock-quote";
+	@Inject
+  @ConfigProperty(name = "quote_service")
+  private String QUOTE_SERVICE;
 
-	private static final String NOTIFICATION_Q       = "jms/Portfolio/NotificationQueue";
-	private static final String NOTIFICATION_QCF     = "jms/Portfolio/NotificationQueueConnectionFactory";
+	@Inject
+  @ConfigProperty(name = "notification_q")
+  private String NOTIFICATION_Q;
+
+	@Inject
+  @ConfigProperty(name = "notification_qcf")
+  private String NOTIFICATION_QCF;
 
 	private static final String BASIC    = "Basic";
 	private static final String BRONZE   = "Bronze";
@@ -128,18 +139,18 @@ public class Portfolio extends Application {
 		try {
 			logger.fine("Running following SQL: SELECT * FROM Portfolio");
 			ResultSet results = invokeJDBCWithResults("SELECT * FROM Portfolio");
-	
+
 			logger.fine("Iterating over results");
 			while (results.next()) {
 				String owner = results.getString("owner");
 				double total = results.getDouble("total");
 				String loyalty = results.getString("loyalty");
-	
+
 				JsonObjectBuilder portfolio = Json.createObjectBuilder();
 				portfolio.add("owner", owner);
 				portfolio.add("total", total);
 				portfolio.add("loyalty", loyalty);
-	
+
 				builder.add(portfolio);
 				count++;
 			}
@@ -148,7 +159,7 @@ public class Portfolio extends Application {
 			sqle.printStackTrace();
 			throw sqle;
 		}
-	
+
 		logger.info("Returning "+count+" portfolios");
 
 		JsonArray portfolios = builder.build();
@@ -452,21 +463,21 @@ public class Portfolio extends Application {
 			if (loyaltyLevel != null) {
 				loyalty = loyaltyLevel.getString("loyalty");
 				logger.info("New loyalty level for "+owner+" is "+loyalty);
-	
+
 				if (!oldLoyalty.equalsIgnoreCase(loyalty)) try {
 					logger.info("Change in loyalty level detected.");
 					JsonObjectBuilder builder = Json.createObjectBuilder();
-		
+
 					String user = request.getRemoteUser(); //logged-in user
 					if (user != null) builder.add("id", user);
-		
+
 					builder.add("owner", owner);
 					builder.add("old", oldLoyalty);
 					builder.add("new", loyalty);
-		
+
 					JsonObject message = builder.build();
 					logger.info(message.toString());
-		
+
 					invokeJMS(message);
 				} catch (JMSException jms) { //in case MQ is not configured, just log the exception and continue
 					logger.warning("Unable to send message to JMS provider.  Continuing without notification of change in loyalty level.");
@@ -598,12 +609,12 @@ public class Portfolio extends Application {
 			logger.info("Running SQL executeUpdate command: "+command);
 			Connection connection = datasource.getConnection();
 			Statement statement = connection.createStatement();
-	
+
 			statement.executeUpdate(command);
-	
+
 			statement.close();
 			connection.close();
-	
+
 			logger.info("SQL executeUpdate command completed successfully");
 		} catch (SQLException sqle) {
 			logException(sqle);
@@ -624,16 +635,16 @@ public class Portfolio extends Application {
 			logger.fine("Running SQL executeQuery command: "+command);
 			Connection connection = datasource.getConnection();
 			Statement statement = connection.createStatement();
-	
+
 			statement.executeQuery(command);
-	
+
 			results = statement.getResultSet();
 			logger.info("SQL executeQuery command completed successfully - returning results");
 		} catch (SQLException sqle) {
 			logException(sqle);
 			throw sqle;
 		}
-	
+
 		return results; //caller needs to pass this to releaseResults when done
 	}
 
@@ -680,7 +691,7 @@ public class Portfolio extends Application {
 		logger.info("Getting loyalty level for "+owner);
 		JsonObject portfolio = getPortfolioWithoutStocks(owner);
 		String loyalty = portfolio.getString("loyalty");
-	
+
 		double commission = getCommission(loyalty);
 
 		int free = portfolio.getInt("free");
@@ -717,7 +728,7 @@ public class Portfolio extends Application {
 				commission = 6.99;
 			} else if (loyalty.equalsIgnoreCase(PLATINUM)) {
 				commission = 5.99;
-			} 
+			}
 		}
 
 		return commission;
