@@ -1,0 +1,16 @@
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceInstance
+metadata:
+  name: mq-instance
+spec:
+  clusterServiceClassExternalName: mq
+  clusterServicePlanExternalName: default
+---
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceBinding
+metadata:
+  name: mq-binding
+spec:
+  instanceRef:
+    name: mq-instance
+  secretName: mq

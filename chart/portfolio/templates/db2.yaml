@@ -1,0 +1,16 @@
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceInstance
+metadata:
+  name: db2-instance
+spec:
+  clusterServiceClassExternalName: db2
+  clusterServicePlanExternalName: default
+---
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceBinding
+metadata:
+  name: db2-binding
+spec:
+  instanceRef:
+    name: db2-instance
+  secretName: db2
