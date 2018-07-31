@@ -1,0 +1,16 @@
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceInstance
+metadata:
+  name: watson-instance
+spec:
+  clusterServiceClassExternalName: watson
+  clusterServicePlanExternalName: default
+---
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceBinding
+metadata:
+  name: watson-binding
+spec:
+  instanceRef:
+    name: watson-instance
+  secretName: watson
