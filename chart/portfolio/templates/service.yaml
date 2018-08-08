@@ -4,6 +4,7 @@ metadata:
   name: "{{  .Chart.Name }}-service"
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    solution: "stock-trader"
 spec:
   type: {{ .Values.service.type }}
   ports:
