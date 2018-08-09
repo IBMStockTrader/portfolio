@@ -13,6 +13,7 @@ spec:
       labels:
         app: "{{  .Chart.Name }}-selector"
         version: "current"
+        solution: "stock-trader"
     spec:
       containers:
       - name: "{{  .Chart.Name  }}"
