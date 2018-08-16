@@ -40,13 +40,18 @@ import javax.sql.DataSource;
 
 //Transactions
 import javax.annotation.ManagedBean;
+import javax.annotation.security.RolesAllowed;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 
 //mpMetrics 1.1
 import org.eclipse.microprofile.metrics.annotation.Counted;
 
+//mpTracing 1.0
+import org.eclipse.microprofile.opentracing.Traced;
+
 //JMS 2.0
+import javax.jms.DeliveryMode;
 import javax.jms.JMSException;
 import javax.jms.Queue;
 import javax.jms.QueueConnection;
@@ -56,7 +61,7 @@ import javax.jms.QueueSession;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-//JSON-P 1.0 (JSR 353).  The replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
+//JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
@@ -85,7 +90,7 @@ import javax.ws.rs.Path;
 
 @ApplicationPath("/")
 @Path("/")
-@ManagedBean //enable interceptors like @Transactional (note you need managedBeans-1.0 server.xml feature, and WEB-INF/beans.xml in war)
+@ManagedBean("portfolio") //enable interceptors like @Transactional (note you need managedBeans-1.0 server.xml feature, and WEB-INF/beans.xml in war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
@@ -111,6 +116,8 @@ public class Portfolio extends Application {
 	private DataSource datasource = null;
 
 	private String odmService = null;
+	private String odmId = null;
+	private String odmPwd = null;
 	private String watsonService = null;
 	private String watsonId = null;
 	private String watsonPwd = null;
@@ -446,40 +453,47 @@ public class Portfolio extends Application {
 
 			//call the LoyaltyLevel business rule to get the current loyalty level of this portfolio
 			logger.info("Calling loyalty-level ODM business rule for "+owner);
-			JsonObject loyaltyDecision = invokeREST(request, "POST", odmService, payloadString, null, null);
-			logger.info(loyaltyDecision.toString());
-			JsonObject loyaltyLevel = loyaltyDecision.getJsonObject("theLoyaltyDecision");
-			if (loyaltyLevel != null) {
-				loyalty = loyaltyLevel.getString("loyalty");
-				logger.info("New loyalty level for "+owner+" is "+loyalty);
-	
-				if (!oldLoyalty.equalsIgnoreCase(loyalty)) try {
-					logger.info("Change in loyalty level detected.");
-					JsonObjectBuilder builder = Json.createObjectBuilder();
+			JsonObject loyaltyDecision = invokeREST(request, "POST", odmService, payloadString, odmId, odmPwd);
+			if (loyaltyDecision != null) {
+				logger.info(loyaltyDecision.toString());
+				JsonObject loyaltyLevel = loyaltyDecision.getJsonObject("theLoyaltyDecision");
+				if (loyaltyLevel != null) {
+					logger.info("Parsing results from ODM.");
+					loyalty = loyaltyLevel.getString("loyalty");
+					logger.info("New loyalty level for "+owner+" is "+loyalty);
 		
-					String user = request.getRemoteUser(); //logged-in user
-					if (user != null) builder.add("id", user);
-		
-					builder.add("owner", owner);
-					builder.add("old", oldLoyalty);
-					builder.add("new", loyalty);
-		
-					JsonObject message = builder.build();
-					logger.info(message.toString());
-		
-					invokeJMS(message);
-				} catch (JMSException jms) { //in case MQ is not configured, just log the exception and continue
-					logger.warning("Unable to send message to JMS provider.  Continuing without notification of change in loyalty level.");
-					logException(jms);
-					Exception linked = jms.getLinkedException(); //get the nested exception from MQ
-					if (linked != null) logException(linked);
-				} catch (NamingException ne) { //in case MQ is not configured, just log the exception and continue
-					logger.warning("Unable to lookup JMS managed resources from JNDI.  Continuing without notification of change in loyalty level.");
-					logException(ne);
-				} catch (Throwable t) { //in case MQ is not configured, just log the exception and continue
-					logger.warning("An unexpected error occurred.  Continuing without notification of change in loyalty level.");
-					logException(t);
+					if (!oldLoyalty.equalsIgnoreCase(loyalty)) try {
+						logger.info("Change in loyalty level detected.");
+						JsonObjectBuilder builder = Json.createObjectBuilder();
+			
+						String user = request.getRemoteUser(); //logged-in user
+						if (user != null) builder.add("id", user);
+			
+						builder.add("owner", owner);
+						builder.add("old", oldLoyalty);
+						builder.add("new", loyalty);
+			
+						JsonObject message = builder.build();
+						logger.info(message.toString());
+			
+						invokeJMS(message);
+					} catch (JMSException jms) { //in case MQ is not configured, just log the exception and continue
+						logger.warning("Unable to send message to JMS provider.  Continuing without notification of change in loyalty level.");
+						logException(jms);
+						Exception linked = jms.getLinkedException(); //get the nested exception from MQ
+						if (linked != null) logException(linked);
+					} catch (NamingException ne) { //in case MQ is not configured, just log the exception and continue
+						logger.warning("Unable to lookup JMS managed resources from JNDI.  Continuing without notification of change in loyalty level.");
+						logException(ne);
+					} catch (Throwable t) { //in case MQ is not configured, just log the exception and continue
+						logger.warning("An unexpected error occurred.  Continuing without notification of change in loyalty level.");
+						logException(t);
+					}
+				} else {
+					logger.warning("theLoyaltyDecision from ODM was null!");
 				}
+			} else {
+				logger.warning("Got back null loyalty level JSON from ODM!");
 			}
 		} catch (IOException ioe) {
 			logger.warning("Unable to get loyalty level.  Using cached value instead");
@@ -489,7 +503,9 @@ public class Portfolio extends Application {
 		return loyalty;
 	}
 
+	@Traced
 	private static JsonObject invokeREST(HttpServletRequest request, String verb, String uri, String payload, String user, String password) throws IOException {
+		JsonObject json = null;
 		logger.info("Preparing call to "+verb+" "+uri);
 		URL url = new URL(uri);
 
@@ -510,8 +526,9 @@ public class Portfolio extends Application {
 		}
 
 		if (payload != null) {
-			logger.info("Writing JSON to body of REST call:"+payload);
+			logger.info("Getting output stream for REST call");
 			OutputStream body = conn.getOutputStream();
+			logger.info("Writing JSON to body of REST call:"+payload);
 			body.write(payload.getBytes());
 			body.flush();
 			body.close();
@@ -519,15 +536,28 @@ public class Portfolio extends Application {
 		}
 
 		logger.info("Invoking REST URL");
+		int rc = conn.getResponseCode();
+		logger.info("REST URL returned response code: "+rc);
+
 		InputStream stream = conn.getInputStream();
 
-		logger.info("Parsing results as JSON");
-//		JSONObject json = JSONObject.parse(stream); //JSON4J
-		JsonObject json = Json.createReader(stream).readObject();
+		try {
+			logger.info("Parsing results as JSON");
+
+//			JSONObject json = JSONObject.parse(stream); //JSON4J
+			json = Json.createReader(stream).readObject();
+		} catch (Throwable t) {
+			logException(t);
+		}
 
 		stream.close();
 
-		logger.fine("Returning "+json.toString());
+		if (json != null) {
+			logger.info("Returning "+json.toString());
+		} else {
+			logger.info("Got back null JSON!");
+		}
+
 		return json;
 	}
 
@@ -550,8 +580,9 @@ public class Portfolio extends Application {
 		}
 	}
 
+	@Traced
 	private void initialize() throws NamingException {
-		if (!initialized) {
+		if (!initialized) try {
 			logger.info("Obtaining JDBC Datasource");
 
 			context = new InitialContext();
@@ -578,15 +609,27 @@ public class Portfolio extends Application {
 
 			logger.fine("Getting ODM url");
 			odmService = System.getenv("ODM_URL");
+			odmId = System.getenv("ODM_ID");
+			odmPwd = System.getenv("ODM_PWD");
+
 			if (odmService != null) {
 				logger.info("Initialization complete");
 			} else {
 				logger.warning("ODM_URL is null");
 			}
 			initialized = true;
+		} catch (NamingException ne) {
+			logger.warning("JNDI lookup failed.  Initialization did NOT complete.  Expect severe failures!");
+			logException(ne);
+			throw ne;
+		} catch (RuntimeException re) {
+			logger.warning("Runtime exception.  Initialization did NOT complete.  Expect severe failures!");
+			logException(re);
+			throw re;
 		}
 	}
 
+	@Traced
 	private void invokeJDBC(String command) throws SQLException {
 		try {
 			initialize();
@@ -611,6 +654,7 @@ public class Portfolio extends Application {
 		}
 	}
 
+	@Traced
 	private ResultSet invokeJDBCWithResults(String command) throws SQLException {
 		ResultSet results = null;
 
@@ -637,6 +681,7 @@ public class Portfolio extends Application {
 		return results; //caller needs to pass this to releaseResults when done
 	}
 
+	@Traced
 	private void releaseResults(ResultSet results) throws SQLException {
 		logger.info("Releasing JDBC resources");
 
@@ -652,6 +697,7 @@ public class Portfolio extends Application {
 
 	/** Send a JSON message to our notification queue.
 	 */
+	@Traced
 	private void invokeJMS(JsonObject json) throws JMSException, NamingException {
 		if (!initialized) initialize(); //gets our JMS managed resources (Q and QCF)
 
@@ -667,6 +713,7 @@ public class Portfolio extends Application {
 
 		//"mqclient" group needs "put" authority on the queue for next two lines to work
 		QueueSender sender = session.createSender(queue);
+		sender.setDeliveryMode(DeliveryMode.PERSISTENT);
 		sender.send(message);
 
 		sender.close();
