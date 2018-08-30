@@ -38,17 +38,22 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import javax.sql.DataSource;
 
-//Transactions
-import javax.annotation.ManagedBean;
-import javax.annotation.security.RolesAllowed;
-import javax.transaction.Transactional;
-import javax.transaction.Transactional.TxType;
+//CDI 1.2
+import javax.inject.Inject;
+import javax.enterprise.context.RequestScoped;
+
+//mpConfig 1.2
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 //mpMetrics 1.1
 import org.eclipse.microprofile.metrics.annotation.Counted;
 
-//mpTracing 1.0
+//mpOpenTracing 1.0
 import org.eclipse.microprofile.opentracing.Traced;
+
+//Transactions
+import javax.transaction.Transactional;
+import javax.transaction.Transactional.TxType;
 
 //JMS 2.0
 import javax.jms.DeliveryMode;
@@ -90,7 +95,7 @@ import javax.ws.rs.Path;
 
 @ApplicationPath("/")
 @Path("/")
-@ManagedBean("portfolio") //enable interceptors like @Transactional (note you need managedBeans-1.0 server.xml feature, and WEB-INF/beans.xml in war)
+@RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
@@ -108,6 +113,8 @@ public class Portfolio extends Application {
 	private static final String GOLD     = "Gold";
 	private static final String PLATINUM = "Platinum";
 
+	private boolean initialized = false;
+
 	private InitialContext context = null;
 
 	private Queue queue = null;
@@ -115,14 +122,12 @@ public class Portfolio extends Application {
 
 	private DataSource datasource = null;
 
-	private String odmService = null;
-	private String odmId = null;
-	private String odmPwd = null;
-	private String watsonService = null;
-	private String watsonId = null;
-	private String watsonPwd = null;
-	private boolean initialized = false;
-
+	private @Inject @ConfigProperty(name = "ODM_URL") String odmService;
+	private @Inject @ConfigProperty(name = "ODM_ID") String odmId;
+	private @Inject @ConfigProperty(name = "ODM_PWD") String odmPwd;
+	private @Inject @ConfigProperty(name = "WATSON_URL") String watsonService;
+	private @Inject @ConfigProperty(name = "WATSON_ID") String watsonId;
+	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd;
 
 	@GET
 	@Path("/")
@@ -597,25 +602,16 @@ public class Portfolio extends Application {
 
 			logger.info("JMS Initialization completed successfully!"); //exception would have occurred otherwise
 
-			logger.info("Reading the Watson environment variables"); //TODO: replace System.getenv with mpConfig
-			watsonService = System.getenv("WATSON_URL");
-			watsonId = System.getenv("WATSON_ID");
-			watsonPwd = System.getenv("WATSON_PWD");
 			if (watsonService != null) {
 				logger.info("Watson initialization completed successfully!");
 			} else {
-				logger.warning("WATSON_URL is null");
+				logger.warning("WATSON_URL config property is null");
 			}
-
-			logger.fine("Getting ODM url");
-			odmService = System.getenv("ODM_URL");
-			odmId = System.getenv("ODM_ID");
-			odmPwd = System.getenv("ODM_PWD");
 
 			if (odmService != null) {
 				logger.info("Initialization complete");
 			} else {
-				logger.warning("ODM_URL is null");
+				logger.warning("ODM_URL config property is null");
 			}
 			initialized = true;
 		} catch (NamingException ne) {
