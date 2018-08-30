@@ -22,7 +22,6 @@
         <feature>jca-1.7</feature>
         <feature>jndi-1.0</feature>
         <feature>appSecurity-2.0</feature>
-        <feature>managedBeans-1.0</feature>
         <feature>logstashCollector-1.0</feature>
     </featureManager>
 
