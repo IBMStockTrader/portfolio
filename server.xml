@@ -35,7 +35,7 @@
 
     <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" />
 
-    <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default" ignoreApplicationAuthMethod="false"/>
+    <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" jwksUri="http://trader-service:9080/jwt/ibm/api/myBuilder/jwk" ignoreApplicationAuthMethod="false"/>
 
 <!--
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
