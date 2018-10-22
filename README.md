@@ -27,21 +27,31 @@ via *JDBC*.  The following operations are available:
 
 `DELETE /{owner}` - removes the portfolio for the specified owner.
 
-All operations return *JSON*.  A *portfolio* object contains fields named *owner*, *total*, and *loyalty*,
-plus an array of *stocks*.  A *stock* object contains fields named *symbol*, *shares*, *price*, *total*,
-and *date*.  The only operation that takes any query params is the 'PUT' operation, which expects params
-named *symbol* and *shares*.
+`POST /{owner}/feedback` - submits feedback (to the Watson Tone Analyzer)
+
+All operations return *JSON*.  A *portfolio* object contains fields named *owner*, *total*, *loyalty*, *balance*,
+*commissions*, *free*, *sentiment*, and *nextCommission*, plus an array of *stocks*.  A *stock* object contains
+fields named *symbol*, *shares*, *commission*, *price*, *total*, and *date*.  The only operation that takes any
+query params is the `PUT` operation, which expects params named *symbol* and *shares*.  Also, the `feedback`
+operation takes a JSON object in the http body, with a single field named *text*.
 
 For example, doing a `PUT http://localhost:9080/portfolio/John?symbol=IBM&shares=123` (against a freshly
 created portfolio for *John*) would return *JSON* like `{"owner": "John", "total": 19120.35, "loyalty": "Bronze",
-"stocks": [{"symbol": "IBM", "shares": 123, "price": 155.45, "total": 19120.35, "date": "2017-06-26"}]}`.
+"balance": 40.01, "commissions": 9.99, "free": 0, "sentiment": "Unknown", "nextCommission": 8.99, "stocks":
+[{"symbol": "IBM", "shares": 123, "commission": 9.99, "price": 155.45, "total": 19120.35, "date": "2017-06-26"}]}`.
 
 The above REST call would also add a row to the Stocks table via a SQL statement like `INSERT INTO Stock
 (owner, symbol, shares, price, total, dateQuoted) VALUES ('John', 'IBM', 123, 155.45, 19120.35, '2017-06-26')`,
 and would update the corresponding row in the Portfolio table via a SQL statement like
 `UPDATE Portfolio SET total = 19120.35, loyalty = 'Bronze' WHERE owner = 'John'`.
 
-The code should work with any *JDBC* provider.  It has been tested with **DB2** and with **Derby**.  Changing providers simply means updating the *Dockerfile* to copy the *JDBC* jar file into the Docker image, and updating the *server.xml* to reference it and specify and database-specific settings.  No *Java* code changes are necessary when changing *JDBC* providers.  The database can either be another pod in the same Kubernetes environment, or it can be running on "bare metal" in a traditional on-premises environment.  Endpoint and credential info is specified in the Kubernetes secret and made available as environment variables to the server.xml.  See the *deploy.yaml* for details.
+The code should work with any *JDBC* provider.  It has been tested with **DB2** and with **Derby**.  Changing
+providers simply means updating the *Dockerfile* to copy the *JDBC* jar file into the Docker image, and updating
+the *server.xml* to reference it and specify any database-specific settings.  No *Java* code changes are necessary
+when changing *JDBC* providers.  The database can either be another pod in the same *Kubernetes* environment, or
+it can be running on "bare metal" in a traditional on-premises environment.  Endpoint and credential info is
+specified in the *Kubernetes* secret and made available as environment variables to the server.xml.  See the
+*deploy.yaml* for details.
 
 ### Prerequisites for ICP Deployment
  This project requires two secrets: `jwt` and `db2`.  You can get the DB2 values from inspecting your DB2 secrets.
