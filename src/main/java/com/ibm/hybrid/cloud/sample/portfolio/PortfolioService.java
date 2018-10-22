@@ -99,8 +99,8 @@ import javax.ws.rs.Path;
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
-public class Portfolio extends Application {
-	private static Logger logger = Logger.getLogger(Portfolio.class.getName());
+public class PortfolioService extends Application {
+	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
 
 	private static final String QUOTE_SERVICE        = "http://stock-quote-service:9080/stock-quote";
 
