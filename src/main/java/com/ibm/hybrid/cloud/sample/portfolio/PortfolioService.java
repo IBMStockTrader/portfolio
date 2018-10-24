@@ -24,6 +24,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Base64;
 import java.util.Enumeration;
 
@@ -40,7 +43,7 @@ import javax.sql.DataSource;
 
 //CDI 1.2
 import javax.inject.Inject;
-import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.ApplicationScoped;
 
 //mpConfig 1.2
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -69,13 +72,14 @@ import javax.jms.TextMessage;
 //JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
 import javax.json.Json;
 import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 
 //JNDI 1.0
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+
+//Servlet 4.0
 import javax.servlet.http.HttpServletRequest;
 
 //JAX-RS 2.0 (JSR 339)
@@ -85,6 +89,7 @@ import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.PathParam;
@@ -95,7 +100,7 @@ import javax.ws.rs.Path;
 
 @ApplicationPath("/")
 @Path("/")
-@RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
+@ApplicationScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
@@ -103,6 +108,7 @@ public class PortfolioService extends Application {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
 
 	private static final String QUOTE_SERVICE        = "http://stock-quote-service:9080/stock-quote";
+	private static final double ERROR                = -1.0;
 
 	private static final String NOTIFICATION_Q       = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF     = "jms/Portfolio/NotificationQueueConnectionFactory";
@@ -122,10 +128,12 @@ public class PortfolioService extends Application {
 
 	private DataSource datasource = null;
 
+	private SimpleDateFormat formatter = null;
+
 	private @Inject @ConfigProperty(name = "ODM_URL") String odmService;
-	private @Inject @ConfigProperty(name = "ODM_ID") String odmId;
-	private @Inject @ConfigProperty(name = "ODM_PWD") String odmPwd;
-	private @Inject @ConfigProperty(name = "WATSON_URL") String watsonService;
+	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
+	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
+	private @Inject @ConfigProperty(name = "WATSON_URL", defaultValue = "https://gateway.watsonplatform.net/tone-analyzer/api/v3/tone?version=2017-09-21&sentences=false") String watsonService;
 	private @Inject @ConfigProperty(name = "WATSON_ID") String watsonId;
 	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd;
 
@@ -133,8 +141,8 @@ public class PortfolioService extends Application {
 	@Path("/")
 	@Produces("application/json")
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public JsonArray getPortfolios() throws SQLException {
-		JsonArrayBuilder builder = Json.createArrayBuilder();
+	public Portfolio[] getPortfolios() throws SQLException {
+		ArrayList<Portfolio> portfolioList = new ArrayList<Portfolio>();
 		int count = 0;
 
 		try {
@@ -143,28 +151,36 @@ public class PortfolioService extends Application {
 	
 			logger.fine("Iterating over results");
 			while (results.next()) {
-				String owner = results.getString("owner");
-				double total = results.getDouble("total");
-				String loyalty = results.getString("loyalty");
-	
-				JsonObjectBuilder portfolio = Json.createObjectBuilder();
-				portfolio.add("owner", owner);
-				portfolio.add("total", total);
-				portfolio.add("loyalty", loyalty);
-	
-				builder.add(portfolio);
+				Portfolio portfolio = new Portfolio();
+				portfolio.setOwner(results.getString("owner"));
+				portfolio.setTotal(results.getDouble("total"));
+				portfolio.setLoyalty(results.getString("loyalty"));
+
+				portfolioList.add(portfolio);
 				count++;
 			}
 			releaseResults(results);
 		} catch (SQLException sqle) {
-			sqle.printStackTrace();
+			logException(sqle);
 			throw sqle;
 		}
 	
 		logger.info("Returning "+count+" portfolios");
 
-		JsonArray portfolios = builder.build();
-		logger.fine(portfolios.toString());
+		Portfolio[] portfolios = new Portfolio[count];
+		portfolioList.toArray(portfolios);
+
+		if (logger.isLoggable(Level.FINE)) {
+			StringBuffer json = new StringBuffer("[");
+			for (int index=0; index<count; index++) {
+				Portfolio portfolio = portfolios[index];
+				json.append(portfolio.toString());
+				if (index != count-1) json.append(", ");
+			}
+			json.append("]");
+			logger.fine(json.toString());
+		}
+
 		return portfolios;
 	}
 
@@ -173,24 +189,13 @@ public class PortfolioService extends Application {
 	@Produces("application/json")
 	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public JsonObject createPortfolio(@PathParam("owner") String owner) throws SQLException {
-		JsonObject portfolio = null;
+	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
+		Portfolio portfolio = null;
 		if (owner != null) {
 			logger.info("Creating portfolio for "+owner);
 
-			JsonObjectBuilder portfolioBuilder = Json.createObjectBuilder();
-			portfolioBuilder.add("owner", owner);
-			portfolioBuilder.add("total", 0.0);
-			portfolioBuilder.add("loyalty", "Basic");
-			portfolioBuilder.add("balance", 50.0); //new accounts get $50 free!
-			portfolioBuilder.add("commissions", 0.0);
-			portfolioBuilder.add("free", 0);
-			portfolioBuilder.add("sentiment", "Unknown");
-
-			JsonObjectBuilder stocksBuilder = Json.createObjectBuilder();
-			portfolioBuilder.add("stocks", stocksBuilder);
-
-			portfolio = portfolioBuilder.build();
+			//total=0.0, loyalty="Basic", balance=50.0, commissions=0.0, free=0, sentiment="Unknown", nextCommission=9.99
+			portfolio = new Portfolio(owner, 0.0, "Basic", 50.0, 0.0, 0, "Unknown", 9.99);
 
 			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
 			invokeJDBC("INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
@@ -205,18 +210,17 @@ public class PortfolioService extends Application {
 	@Produces("application/json")
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public JsonObject getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-		JsonObject newPortfolio = null;
+	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
+		Portfolio newPortfolio = null;
 
-		JsonObject oldPortfolio = getPortfolioWithoutStocks(owner);
+		Portfolio oldPortfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 		if (oldPortfolio != null) {
-			String oldLoyalty = oldPortfolio.getString("loyalty");
+			String oldLoyalty = oldPortfolio.getLoyalty();
 			double overallTotal = 0;
 
-			JsonObjectBuilder portfolio = Json.createObjectBuilder();
-			portfolio.add("owner", owner);
+			Portfolio portfolio = new Portfolio(owner);
 
-			JsonObjectBuilder stocks = Json.createObjectBuilder();
+			ArrayList<Stock> stocks = new ArrayList<Stock>();
 
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
 			ResultSet results = invokeJDBCWithResults("SELECT * FROM Stock WHERE owner = '"+owner+"'");
@@ -225,16 +229,15 @@ public class PortfolioService extends Application {
 			logger.fine("Iterating over results");
 			while (results.next()) {
 				count++;
-				JsonObjectBuilder stock = Json.createObjectBuilder();
 
 				String symbol = results.getString("symbol");
-				stock.add("symbol", symbol);
+				Stock stock = new Stock(symbol);
 
 				int shares = results.getInt("shares");
-				stock.add("shares", shares);
+				stock.setShares(shares);
 
 				double commission = results.getDouble("commission");
-				stock.add("commission", commission);
+				stock.setCommission(commission);
 
 				String date = null;
 				double price = 0;
@@ -258,55 +261,65 @@ public class PortfolioService extends Application {
 					logException(ioe);
 
 					date = results.getString("dateQuoted");
+					if (date == null) {
+						Date now = new Date();
+						if (formatter == null) formatter = new SimpleDateFormat("yyyy-MM-dd");
+						date = formatter.format(now);
+					}
+
 					price = results.getDouble("price");
-					total = shares * price;
+					if (price == 0) { //SQL returns 0 for a double if the column was null
+						price = ERROR;
+						total = ERROR;
+					} else {
+						total = shares * price;
+					}
 				}
 
-				stock.add("date", date);
-				stock.add("price", price);
-				stock.add("total", total);
+				stock.setDate(date);
+				stock.setPrice(price);
+				stock.setTotal(total);
 
 				if (price != -1) //-1 is the marker for not being able to get the stock quote.  But don't actually add that value
 					overallTotal += total;
 
 				logger.info("Adding "+symbol+" to portfolio for "+owner);
-				stocks.add(symbol, stock);
+				portfolio.addStock(stock);
 			}
 			logger.info("Processed "+count+" stocks for "+owner);
 
 			releaseResults(results);
 
-			portfolio.add("stocks", stocks);
-			portfolio.add("total", overallTotal);
+			portfolio.setTotal(overallTotal);
 
 			String loyalty = processLoyaltyLevel(request, owner, overallTotal, oldLoyalty);
-			portfolio.add("loyalty", loyalty);
+			portfolio.setLoyalty(loyalty);
 
-			int free = oldPortfolio.getInt("free");
-			portfolio.add("balance", oldPortfolio.getJsonNumber("balance"));
-			portfolio.add("commissions", oldPortfolio.getJsonNumber("commissions"));
-			portfolio.add("free", free);
-			portfolio.add("sentiment", oldPortfolio.getString("sentiment"));
-			portfolio.add("nextCommission", free>0 ? 0.0 : getCommission(loyalty));
+			int free = oldPortfolio.getFree();
+			portfolio.setBalance(oldPortfolio.getBalance());
+			portfolio.setCommissions(oldPortfolio.getCommissions());
+			portfolio.setFree(free);
+			portfolio.setSentiment(oldPortfolio.getSentiment());
+			portfolio.setNextCommission(free>0 ? 0.0 : getCommission(loyalty));
 
 			logger.fine("Running following SQL: UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
 			invokeJDBC("UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
 
-			logger.info("Building portfolio JSON object for "+owner);
-			newPortfolio = portfolio.build();
+			logger.info("Returning "+portfolio.toString());
+			newPortfolio = portfolio;
 		} else {
-			newPortfolio = Json.createObjectBuilder().build(); //so we don't return null
-			logger.warning("No portfolio found for "+owner);
+			newPortfolio = new Portfolio(); //so we don't return null
+			logger.warning("No portfolio found for "+owner); //shouldn't get here; an exception with a 404 should be thrown instead
 		}
 
 		return newPortfolio;
 	}
 
-	private JsonObject getPortfolioWithoutStocks(String owner) throws SQLException {
+	private Portfolio getPortfolioWithoutStocks(String owner) throws SQLException {
 		logger.fine("Running following SQL: SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
 		ResultSet results = invokeJDBCWithResults("SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
 
-		JsonObject portfolio = null;
+		Portfolio portfolio = null;
 		if (results.next()) {
 			logger.info("Found portfolio for "+owner);
 
@@ -317,20 +330,16 @@ public class PortfolioService extends Application {
 			int free = results.getInt("free");
 			String sentiment = results.getString("sentiment");
 
-			JsonObjectBuilder builder = Json.createObjectBuilder();
-			builder.add("owner", owner);
-			builder.add("total", total);
-			builder.add("loyalty", loyalty);
-			builder.add("balance", balance);
-			builder.add("commissions", commissions);
-			builder.add("free", free);
-			builder.add("sentiment", sentiment);
+			releaseResults(results);
 
-			logger.info("Building portfolio JSON object for "+owner);
-			portfolio = builder.build();
+			double nextCommission = getCommission(loyalty);
+
+			portfolio = new Portfolio(owner, total, loyalty, balance, commissions, free, sentiment, nextCommission);
+		} else {
+			releaseResults(results);
+
+			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
 		}
-
-		releaseResults(results);
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
 		return portfolio;
@@ -341,8 +350,8 @@ public class PortfolioService extends Application {
 	@Produces("application/json")
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public JsonObject updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
-		double commission = processCommission(owner);
+	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
+		double commission = processCommission(owner); //throws a 404 if not found
 
 		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
 		ResultSet results = invokeJDBCWithResults("SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
@@ -378,8 +387,8 @@ public class PortfolioService extends Application {
 	@Path("/{owner}")
 	@Produces("application/json")
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public JsonObject deletePortfolio(@PathParam("owner") String owner) throws SQLException {
-		JsonObject portfolio = getPortfolioWithoutStocks(owner);
+	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
+		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
 		logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
 		invokeJDBC("DELETE FROM Portfolio WHERE owner = '"+owner+"'");
@@ -393,13 +402,15 @@ public class PortfolioService extends Application {
 	@Consumes("application/json")
 	@Produces("application/json")
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public JsonObject submitFeedback(@PathParam("owner") String owner, JsonObject input) throws IOException, SQLException {
+	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
 		try {
 			initialize();
 		} catch (NamingException ne) {
 			logger.warning("Error occurred during initialization");
 		}
+
+		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
 		logger.info("Calling Watson Tone Analyzer");
 		JsonObject result = invokeREST(null, "POST", watsonService, input.toString(), watsonId, watsonPwd);
@@ -422,6 +433,18 @@ public class PortfolioService extends Application {
 			}
 		}
 
+		Feedback feedback = getFeedback(owner, sentiment);
+		int freeTrades = feedback.getFree();
+
+		logger.fine("Running following JDBC command: UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
+		invokeJDBC("UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
+
+		logger.info("Returning feedback: "+feedback.toString());
+		return feedback;
+	}
+
+	//Here's where we'll soon have a call to the predictive analytics service in ICP4Data
+	private Feedback getFeedback(String owner, String sentiment) {
 		int freeTrades = 1;
 		String message = "Thanks for providing feedback.  Have a free trade on us!";
 
@@ -431,22 +454,14 @@ public class PortfolioService extends Application {
 			message = "We're sorry you are upset.  Have three free trades on us!";
 		}
 
-		logger.fine("Running following JDBC command: UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
-		invokeJDBC("UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
-
-		JsonObjectBuilder builder = Json.createObjectBuilder();
-		builder.add("sentiment", sentiment);
-		builder.add("free", freeTrades);
-		builder.add("message", message);
-		JsonObject response = builder.build();
-
-		logger.info("Returning response: "+response.toString());
-		return response;
+		Feedback feedback = new Feedback(message, freeTrades, sentiment);
+		return feedback;
 	}
 
 	private String processLoyaltyLevel(HttpServletRequest request, String owner, double overallTotal, String oldLoyalty) {
 		String loyalty = null;
 		try {
+			//I'll leave usage of JSON-P here, to show the alternative to JSON-B that's used everywhere else
 			logger.info("Building input to business rule for "+owner);
 			JsonObjectBuilder outer = Json.createObjectBuilder();
 			JsonObjectBuilder inner = Json.createObjectBuilder();
@@ -721,12 +736,12 @@ public class PortfolioService extends Application {
 
 	private double processCommission(String owner) throws SQLException {
 		logger.info("Getting loyalty level for "+owner);
-		JsonObject portfolio = getPortfolioWithoutStocks(owner);
-		String loyalty = portfolio.getString("loyalty");
+		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		String loyalty = portfolio.getLoyalty();
 	
 		double commission = getCommission(loyalty);
 
-		int free = portfolio.getInt("free");
+		int free = portfolio.getFree();
 		if (free > 0) { //use a free trade if available
 			free--;
 			commission = 0.0;
@@ -734,10 +749,10 @@ public class PortfolioService extends Application {
 			logger.info("Using free trade for "+owner);
 			invokeJDBC("UPDATE Portfolio SET free = "+free+" WHERE owner = '"+owner+"'");
 		} else {
-			double commissions = portfolio.getJsonNumber("commissions").doubleValue();
+			double commissions = portfolio.getCommissions();
 			commissions += commission;
 
-			double balance = portfolio.getJsonNumber("balance").doubleValue();
+			double balance = portfolio.getBalance();
 			balance -= commission;
 
 			logger.info("Charging commission of $"+commission+" for "+owner);
