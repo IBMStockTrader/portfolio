@@ -16,6 +16,7 @@
 FROM websphere-liberty:microProfile2
 
 COPY server.xml /config/server.xml
+COPY jvm.options /config/jvm.options
 COPY db2jcc4.jar /config/db2jcc4.jar
 COPY wmq.jmsra.rar /config/wmq.jmsra.rar
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
