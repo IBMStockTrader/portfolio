@@ -18,7 +18,7 @@ package com.ibm.hybrid.cloud.sample.portfolio;
 
 /** JSON-B POJO class representing an ODM business rule for determining the loyalty level of a portfolio */
 public class ODMLoyaltyRule {
-    private LoyaltyDecision loyaltyDecision = null;
+    private LoyaltyDecision theLoyaltyDecision = null;
 
 
     public ODMLoyaltyRule() { //default constructor
@@ -26,20 +26,20 @@ public class ODMLoyaltyRule {
 
     public ODMLoyaltyRule(double tradeTotal) { //convenience constructor
         LoyaltyDecision newLoyaltyDecision = new LoyaltyDecision(tradeTotal);
-        setLoyaltyDecision(newLoyaltyDecision);
+        setTheLoyaltyDecision(newLoyaltyDecision);
     }
 
-    public LoyaltyDecision getLoyaltyDecision() {
-        return loyaltyDecision;
+    public LoyaltyDecision getTheLoyaltyDecision() {
+        return theLoyaltyDecision;
     }
 
-    public void setLoyaltyDecision(LoyaltyDecision newLoyaltyDecision) {
-        loyaltyDecision = newLoyaltyDecision;
+    public void setTheLoyaltyDecision(LoyaltyDecision newLoyaltyDecision) {
+        theLoyaltyDecision = newLoyaltyDecision;
     }
 
-    public String getLoyalty() {
+    public String determineLoyalty() {
         String loyalty = "Unknown";
-        if (loyaltyDecision != null) loyalty = loyaltyDecision.getLoyalty();
+        if (theLoyaltyDecision != null) loyalty = theLoyaltyDecision.getLoyalty();
         return loyalty;
     }
 
@@ -50,6 +50,6 @@ public class ODMLoyaltyRule {
    }
 
     public String toString() {
-        return "{\"loyaltyDecision\": "+loyaltyDecision.toString()+"}";
+        return "{\"theLoyaltyDecision\": "+theLoyaltyDecision.toString()+"}";
     }
 }
