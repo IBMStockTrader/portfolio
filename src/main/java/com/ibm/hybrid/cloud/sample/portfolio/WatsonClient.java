@@ -20,8 +20,8 @@ package com.ibm.hybrid.cloud.sample.portfolio;
 import javax.enterprise.context.Dependent;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Path;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
@@ -32,7 +32,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 @RegisterRestClient
 /** mpRestClient "remote" interface for the stock quote microservice */
 public interface WatsonClient {
-	@GET
+	@POST
     @Path("/")
     @Consumes("application/json")
 	@Produces("application/json")
