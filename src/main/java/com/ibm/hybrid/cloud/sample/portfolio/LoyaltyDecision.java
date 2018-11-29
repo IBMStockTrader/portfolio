@@ -19,7 +19,7 @@ package com.ibm.hybrid.cloud.sample.portfolio;
 /** JSON-B POJO class representing an ODM business rule for determining the loyalty level of a portfolio */
 public class LoyaltyDecision {
     private double tradeTotal = 0.0;
-    private String loyalty = "Unknown";
+    private String loyalty = "UNKNOWN";
 
 
     public LoyaltyDecision() { //default constructor
@@ -41,7 +41,7 @@ public class LoyaltyDecision {
         return loyalty;
     }
 
-    public void setText(String newLoyalty) {
+    public void setLoyalty(String newLoyalty) {
         loyalty = newLoyalty;
     }
 
