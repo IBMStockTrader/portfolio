@@ -28,6 +28,7 @@ public class LoyaltyChange {
     }
 
     public LoyaltyChange(String initialOwner, String initialOldLoyalty, String initialNewLoyalty) { //convenience constructor
+        setOwner(initialOwner);
         setOld(initialOldLoyalty);
         setNew(initialNewLoyalty);
     }
