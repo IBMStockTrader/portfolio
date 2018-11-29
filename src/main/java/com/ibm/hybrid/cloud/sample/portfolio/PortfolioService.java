@@ -16,7 +16,7 @@
 
 package com.ibm.hybrid.cloud.sample.portfolio;
 
-//Standard HTTP request classes.  Maybe replace these with use of JAX-RS 2.0 client package instead...
+//Standard HTTP request classes.  Maybe replace these with use of mpRestClient instead...
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -53,6 +53,9 @@ import org.eclipse.microprofile.metrics.annotation.Counted;
 
 //mpOpenTracing 1.0
 import org.eclipse.microprofile.opentracing.Traced;
+
+//mpRestClient 1.0
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 //Transactions
 import javax.transaction.Transactional;
@@ -107,12 +110,12 @@ import javax.ws.rs.Path;
 public class PortfolioService extends Application {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
 
-	private static final String QUOTE_SERVICE        = "http://stock-quote-service:9080/stock-quote";
-	private static final double ERROR                = -1.0;
+	private static final double ERROR            = -1.0;
 
-	private static final String NOTIFICATION_Q       = "jms/Portfolio/NotificationQueue";
-	private static final String NOTIFICATION_QCF     = "jms/Portfolio/NotificationQueueConnectionFactory";
+	private static final String NOTIFICATION_Q   = "jms/Portfolio/NotificationQueue";
+	private static final String NOTIFICATION_QCF = "jms/Portfolio/NotificationQueueConnectionFactory";
 
+	//Our ODM rule will return its own values for levels, generally in all caps
 	private static final String BASIC    = "Basic";
 	private static final String BRONZE   = "Bronze";
 	private static final String SILVER   = "Silver";
@@ -130,10 +133,12 @@ public class PortfolioService extends Application {
 
 	private SimpleDateFormat formatter = null;
 
-	private @Inject @ConfigProperty(name = "ODM_URL") String odmService;
+	private @Inject @RestClient StockQuoteClient stockQuoteClient;
+	private @Inject @RestClient ODMClient odmClient;
+	private @Inject @RestClient WatsonClient watsonClient;
+
 	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
 	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
-	private @Inject @ConfigProperty(name = "WATSON_URL", defaultValue = "https://gateway.watsonplatform.net/tone-analyzer/api/v3/tone?version=2017-09-21&sentences=false") String watsonService;
 	private @Inject @ConfigProperty(name = "WATSON_ID") String watsonId;
 	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd;
 
@@ -245,10 +250,12 @@ public class PortfolioService extends Application {
 				try {
 					//call the StockQuote microservice to get the current price of this stock
 					logger.info("Calling stock-quote microservice for "+symbol);
-					JsonObject quote = invokeREST(request, "GET", QUOTE_SERVICE+"/"+symbol, null, null, null);
 
-					date = quote.getString("date");
-					price = quote.getJsonNumber("price").doubleValue();
+					String jwt = request.getHeader("Authorization");
+					Quote quote = stockQuoteClient.getStockQuote(jwt, symbol);
+
+					date = quote.getDate();
+					price = quote.getPrice();
 
 					total = shares * price;
 
@@ -256,9 +263,9 @@ public class PortfolioService extends Application {
 					logger.fine("Running following SQL: UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 					invokeJDBC("UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
-				} catch (IOException ioe) {
+				} catch (Throwable t) {
 					logger.warning("Unable to get fresh stock quote.  Using cached values instead");
-					logException(ioe);
+					logException(t);
 
 					date = results.getString("dateQuoted");
 					if (date == null) {
@@ -412,25 +419,17 @@ public class PortfolioService extends Application {
 
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
-		logger.info("Calling Watson Tone Analyzer");
-		JsonObject result = invokeREST(null, "POST", watsonService, input.toString(), watsonId, watsonPwd);
-		if (result!=null) {
-			logger.info("Result from Watson Tone Analyzer: "+result.toString());
-			JsonObject document_tone = result.getJsonObject("document_tone");
-			if (document_tone!=null) {
-				JsonArray tones = (JsonArray) document_tone.get("tones");
-				double score = 0.0;
-				for (int index=0; index<tones.size(); index++) {
-					JsonObject tone = (JsonObject) tones.get(index);
-					double newScore = tone.getJsonNumber("score").doubleValue();
-					if (newScore > score) { //we might get back multiple tones; if so, go with the one with the highest score
-						sentiment = tone.getString("tone_name");
-						score = newScore;
-					}
-				}
-			} else {
-				logger.warning("Failed to get back document_tone");
-			}
+		try {
+			String credentials = watsonId + ":" + watsonPwd; //Watson accepts basic auth
+			String authorization = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+
+			logger.info("Calling Watson Tone Analyzer");
+
+			WatsonOutput watson = watsonClient.getTone(authorization, input);
+			sentiment = watson.determineSentiment();
+		} catch (Throwable t) {
+			logger.info("Error from Watson, with following input: "+input.toString());
+			logException(t);
 		}
 
 		Feedback feedback = getFeedback(owner, sentiment);
@@ -452,6 +451,10 @@ public class PortfolioService extends Application {
 			logger.info("Tone is angry");
 			freeTrades = 3;
 			message = "We're sorry you are upset.  Have three free trades on us!";
+		} else if ("Unknown".equalsIgnoreCase(sentiment)) {
+			logger.info("Tone is unknown");
+			freeTrades = 0;
+			message = "Error communicating with the Watson Tone Analyzer";
 		}
 
 		Feedback feedback = new Feedback(message, freeTrades, sentiment);
@@ -460,144 +463,48 @@ public class PortfolioService extends Application {
 
 	private String processLoyaltyLevel(HttpServletRequest request, String owner, double overallTotal, String oldLoyalty) {
 		String loyalty = null;
+		ODMLoyaltyRule input = new ODMLoyaltyRule(overallTotal);
 		try {
-			//I'll leave usage of JSON-P here, to show the alternative to JSON-B that's used everywhere else
-			logger.info("Building input to business rule for "+owner);
-			JsonObjectBuilder outer = Json.createObjectBuilder();
-			JsonObjectBuilder inner = Json.createObjectBuilder();
-			inner.add("tradeTotal", overallTotal);
-			outer.add("theLoyaltyDecision", inner.build());
-			JsonObject payload = outer.build();
-			String payloadString = payload.toString();
-			logger.info(payloadString);
+			String credentials = odmId+":"+odmPwd;
+			String basicAuth = "Basic "+Base64.getEncoder().encode(credentials.getBytes());
 
 			//call the LoyaltyLevel business rule to get the current loyalty level of this portfolio
 			logger.info("Calling loyalty-level ODM business rule for "+owner);
-			JsonObject loyaltyDecision = invokeREST(request, "POST", odmService, payloadString, odmId, odmPwd);
-			if (loyaltyDecision != null) {
-				logger.info(loyaltyDecision.toString());
-				JsonObject loyaltyLevel = loyaltyDecision.getJsonObject("theLoyaltyDecision");
-				if (loyaltyLevel != null) {
-					logger.info("Parsing results from ODM.");
-					loyalty = loyaltyLevel.getString("loyalty");
-					logger.info("New loyalty level for "+owner+" is "+loyalty);
-		
-					if (!oldLoyalty.equalsIgnoreCase(loyalty)) try {
-						logger.info("Change in loyalty level detected.");
-						JsonObjectBuilder builder = Json.createObjectBuilder();
-			
-						String user = request.getRemoteUser(); //logged-in user
-						if (user != null) builder.add("id", user);
-			
-						builder.add("owner", owner);
-						builder.add("old", oldLoyalty);
-						builder.add("new", loyalty);
-			
-						JsonObject message = builder.build();
-						logger.info(message.toString());
-			
-						invokeJMS(message);
-					} catch (JMSException jms) { //in case MQ is not configured, just log the exception and continue
-						logger.warning("Unable to send message to JMS provider.  Continuing without notification of change in loyalty level.");
-						logException(jms);
-						Exception linked = jms.getLinkedException(); //get the nested exception from MQ
-						if (linked != null) logException(linked);
-					} catch (NamingException ne) { //in case MQ is not configured, just log the exception and continue
-						logger.warning("Unable to lookup JMS managed resources from JNDI.  Continuing without notification of change in loyalty level.");
-						logException(ne);
-					} catch (Throwable t) { //in case MQ is not configured, just log the exception and continue
-						logger.warning("An unexpected error occurred.  Continuing without notification of change in loyalty level.");
-						logException(t);
-					}
-				} else {
-					logger.warning("theLoyaltyDecision from ODM was null!");
-				}
-			} else {
-				logger.warning("Got back null loyalty level JSON from ODM!");
+			ODMLoyaltyRule result = odmClient.getLoyaltyLevel(basicAuth, input);
+
+			loyalty = result.determineLoyalty();
+			logger.info("New loyalty level for "+owner+" is "+loyalty);
+
+			if (oldLoyalty == null) return loyalty;
+			if (!oldLoyalty.equalsIgnoreCase(loyalty)) try {
+				logger.info("Change in loyalty level detected.");
+
+				LoyaltyChange message = new LoyaltyChange(owner, oldLoyalty, loyalty);
+	
+				String user = request.getRemoteUser(); //logged-in user
+				if (user != null) message.setId(user);
+	
+				logger.info(message.toString());
+	
+				invokeJMS(message);
+			} catch (JMSException jms) { //in case MQ is not configured, just log the exception and continue
+				logger.warning("Unable to send message to JMS provider.  Continuing without notification of change in loyalty level.");
+				logException(jms);
+				Exception linked = jms.getLinkedException(); //get the nested exception from MQ
+				if (linked != null) logException(linked);
+			} catch (NamingException ne) { //in case MQ is not configured, just log the exception and continue
+				logger.warning("Unable to lookup JMS managed resources from JNDI.  Continuing without notification of change in loyalty level.");
+				logException(ne);
+			} catch (Throwable t) { //in case MQ is not configured, just log the exception and continue
+				logger.warning("An unexpected error occurred.  Continuing without notification of change in loyalty level.");
+				logException(t);
 			}
-		} catch (IOException ioe) {
-			logger.warning("Unable to get loyalty level.  Using cached value instead");
-			logException(ioe);
+		} catch (Throwable t) {
+			logger.warning("Unable to get loyalty level, via "+input.toString()+".  Using cached value instead");
+			logException(t);
 			loyalty = oldLoyalty;
 		}
 		return loyalty;
-	}
-
-	@Traced
-	private static JsonObject invokeREST(HttpServletRequest request, String verb, String uri, String payload, String user, String password) throws IOException {
-		JsonObject json = null;
-		logger.info("Preparing call to "+verb+" "+uri);
-		URL url = new URL(uri);
-
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-		if (request!=null) copyFromRequest(conn, request); //forward headers (including cookies) from inbound request
-
-		conn.setRequestMethod(verb);
-		conn.setRequestProperty("Content-Type", "application/json");
-		conn.setDoOutput(true);
-
-		if ((user != null) && (password != null)) { //send via basic-auth
-			logger.info("Setting credentials on REST call");
-			String credentials = user + ":" + password;
-			String authorization = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
-			conn.setRequestProperty("Authorization", authorization);
-			logger.info("Successfully set credentials");
-		}
-
-		if (payload != null) {
-			logger.info("Getting output stream for REST call");
-			OutputStream body = conn.getOutputStream();
-			logger.info("Writing JSON to body of REST call:"+payload);
-			body.write(payload.getBytes());
-			body.flush();
-			body.close();
-			logger.info("Successfully wrote JSON");
-		}
-
-		logger.info("Invoking REST URL");
-		int rc = conn.getResponseCode();
-		logger.info("REST URL returned response code: "+rc);
-
-		InputStream stream = conn.getInputStream();
-
-		try {
-			logger.info("Parsing results as JSON");
-
-//			JSONObject json = JSONObject.parse(stream); //JSON4J
-			json = Json.createReader(stream).readObject();
-		} catch (Throwable t) {
-			logException(t);
-		}
-
-		stream.close();
-
-		if (json != null) {
-			logger.info("Returning "+json.toString());
-		} else {
-			logger.info("Got back null JSON!");
-		}
-
-		return json;
-	}
-
-	//forward headers (including cookies) from inbound request
-	private static void copyFromRequest(HttpURLConnection conn, HttpServletRequest request) {
-		logger.info("Copying headers (and cookies) from request to response");
-		Enumeration<String> headers = request.getHeaderNames();
-		if (headers != null) {
-			int count = 0;
-			while (headers.hasMoreElements()) {
-				String headerName = headers.nextElement(); //"Authorization" and "Cookie" are especially important headers
-				String headerValue = request.getHeader(headerName);
-				logger.fine(headerName+": "+headerValue);
-				conn.setRequestProperty(headerName, headerValue); //odd it's called request property here, rather than header...
-				count++;
-			}
-			if (count == 0) logger.warning("headers is empty");
-		} else {
-			logger.warning("headers is null");
-		}
 	}
 
 	@Traced
@@ -617,16 +524,16 @@ public class PortfolioService extends Application {
 
 			logger.info("JMS Initialization completed successfully!"); //exception would have occurred otherwise
 
-			if (watsonService != null) {
+			if (watsonId != null) {
 				logger.info("Watson initialization completed successfully!");
 			} else {
-				logger.warning("WATSON_URL config property is null");
+				logger.warning("WATSON_ID config property is null");
 			}
 
-			if (odmService != null) {
+			if (odmId != null) {
 				logger.info("Initialization complete");
 			} else {
-				logger.warning("ODM_URL config property is null");
+				logger.warning("ODM_ID config property is null");
 			}
 			initialized = true;
 		} catch (NamingException ne) {
@@ -649,7 +556,7 @@ public class PortfolioService extends Application {
 		}
 
 		try {
-			logger.info("Running SQL executeUpdate command: "+command);
+			logger.fine("Running SQL executeUpdate command: "+command);
 			Connection connection = datasource.getConnection();
 			Statement statement = connection.createStatement();
 	
@@ -709,7 +616,7 @@ public class PortfolioService extends Application {
 	/** Send a JSON message to our notification queue.
 	 */
 	@Traced
-	private void invokeJMS(JsonObject json) throws JMSException, NamingException {
+	private void invokeJMS(Object json) throws JMSException, NamingException {
 		if (!initialized) initialize(); //gets our JMS managed resources (Q and QCF)
 
 		logger.info("Preparing to send a JMS message");
