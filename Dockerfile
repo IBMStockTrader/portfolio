@@ -21,10 +21,14 @@ COPY db2jcc4.jar /config/db2jcc4.jar
 COPY wmq.jmsra.rar /config/wmq.jmsra.rar
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
 COPY key.jks /config/resources/security/key.jks
+COPY certs.jks /config/resources/security/certs.jks
 COPY keystore.xml /config/configDropins/defaults/keystore.xml
 # COPY ltpa.keys /config/resources/security/ltpa.keys
 
+#apt-get needs root access
+USER root
 RUN apt-get update
 RUN apt-get install curl -y
+USER 1001
 
 RUN installUtility install --acceptLicense defaultServer
