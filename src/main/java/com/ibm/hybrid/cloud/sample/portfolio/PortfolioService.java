@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Base64;
 import java.util.Enumeration;
+import java.util.UUID;
 
 //Logging (JSR 47)
 import java.util.logging.Level;
@@ -131,7 +132,10 @@ public class PortfolioService extends Application {
 
 	private DataSource datasource = null;
 
-	private SimpleDateFormat formatter = null;
+	private static SimpleDateFormat dateFormatter = null;
+	private static SimpleDateFormat timestampFormatter = null;
+
+	private static EventStreamsProducer kafkaProducer = null;
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 	private @Inject @RestClient ODMClient odmClient;
@@ -141,6 +145,8 @@ public class PortfolioService extends Application {
 	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
 	private @Inject @ConfigProperty(name = "WATSON_ID") String watsonId;
 	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd;
+	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
+	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
 	@GET
 	@Path("/")
@@ -270,8 +276,8 @@ public class PortfolioService extends Application {
 					date = results.getString("dateQuoted");
 					if (date == null) {
 						Date now = new Date();
-						if (formatter == null) formatter = new SimpleDateFormat("yyyy-MM-dd");
-						date = formatter.format(now);
+						if (dateFormatter == null) dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
+						date = dateFormatter.format(now);
 					}
 
 					price = results.getDouble("price");
@@ -385,9 +391,12 @@ public class PortfolioService extends Application {
 		}
 
 		//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
-
 		logger.info("Refreshing portfolio for "+owner);
-		return getPortfolio(owner, request);
+		Portfolio portfolio = getPortfolio(owner, request);
+
+		invokeKafka(portfolio, symbol, shares);
+
+		return portfolio;
 	}
 
 	@DELETE
@@ -639,6 +648,45 @@ public class PortfolioService extends Application {
 		connection.close();
 
 		logger.info("JMS Message sent successfully!");
+	}
+
+	/** Send a message to IBM Event Streams via the Kafka APIs */
+	private void invokeKafka(Portfolio portfolio, String symbol, int shares) {
+		if (kafkaAddress == null || kafkaAddress.isEmpty()) {
+			logger.info("IBM Event Streams not configured, so not sending Kafka message about this stock trade");
+			return; //only do the following if Kafka is configured
+		}
+
+		logger.info("Preparing to send a Kafka message");
+
+		try {
+			if (kafkaProducer == null) kafkaProducer = new EventStreamsProducer(kafkaAddress, kafkaTopic);
+
+			Date now = new Date();
+			if (timestampFormatter == null) timestampFormatter = new SimpleDateFormat("yyyy-MM-ddThh:mm:ss.SSS");
+			String when = timestampFormatter.format(now);
+	
+			double price = -1;
+			double commission = 0;
+			String owner = portfolio.getOwner();
+			JsonObject stock = portfolio.getStocks().getJsonObject(symbol);
+			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
+				price = stock.getJsonNumber("price").doubleValue();
+				commission = stock.getJsonNumber("commission").doubleValue();
+			} else {
+				return; //nothing to send if we can't look up the values
+			}
+	
+			String tradeID = UUID.randomUUID().toString();
+			StockPurchase purchase = new StockPurchase(tradeID, owner, symbol, shares, price, when, commission);
+			String message = purchase.toString();
+	
+			kafkaProducer.produce(message); //publish the serialized JSON to our Kafka topic in IBM Event Streams
+			logger.info("Delivered meesage to Kafka: "+message);
+		} catch (Throwable t) {
+			logger.warning("Failure sending message to Kafka");
+			logException(t);
+		} 
 	}
 
 	private double processCommission(String owner) throws SQLException {
