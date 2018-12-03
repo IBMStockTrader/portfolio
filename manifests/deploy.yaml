@@ -27,11 +27,10 @@ spec:
     spec:
       containers:
       - name: portfolio
-#       Note: this manifests/deploy.yaml will be used when we want to deploy this directly using kubectl or a helm chart. 
-#             Microclimate uses the Charts folder so we can actually have both options
-        image: ibmstocktrader/portfolio:latest # Docker Hub
+#       image: portfolio:latest # Microservice Builder
 #       image: mycluster.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
 #       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Container Service
+        image: ibmstocktrader/portfolio:latest # Docker Hub
         env:
           - name: JDBC_HOST
             valueFrom:
@@ -118,11 +117,37 @@ spec:
               secretKeyRef:
                 name: odm
                 key: id
+                optional: true
           - name: ODM_PWD
             valueFrom:
               secretKeyRef:
                 name: odm
                 key: pwd
+                optional: true
+          - name: KAFKA_TOPIC
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: topic
+                optional: true
+          - name: KAFKA_ADDRESS
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: address
+                optional: true
+          - name: KAFKA_USER
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: user
+                optional: true
+          - name: KAFKA_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: api-key
+                optional: true
           - name: JWT_AUDIENCE
             valueFrom:
               secretKeyRef:
