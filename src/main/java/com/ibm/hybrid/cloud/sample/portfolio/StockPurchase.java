@@ -32,6 +32,7 @@ public class StockPurchase {
 
     public StockPurchase(String initialId, String initialOwner, String initialSymbol, int initialShares,
             double initialPrice, String initialWhen, double initialCommission) {
+        setId(initialId);
         setOwner(initialOwner);
         setSymbol(initialSymbol);
         setShares(initialShares);
@@ -103,7 +104,7 @@ public class StockPurchase {
    }
 
     public String toString() {
-        return "{\"owner\": \""+owner+"\", \"symbol\": \""+symbol+"\", \"shares\": "+shares+
+        return "{\"id\": \""+id+"\", \"owner\": \""+owner+"\", \"symbol\": \""+symbol+"\", \"shares\": "+shares+
                ", \"price\": "+price+", \"when\": \""+when+"\", \"commission\": "+commission+"}";
     }
 }
