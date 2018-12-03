@@ -1,3 +1,3 @@
 -Dcom.ibm.hybrid.cloud.sample.portfolio.StockQuoteClient/mp-rest/url=http://stock-quote-service:9080/stock-quote
--Dcom.ibm.hybrid.cloud.sample.portfolio.ODMClient/mp-rest/url=http://odm-trader1-ibm-odm-dev:9060/DecisionService/rest/ICP_Trader_Dev_1/determineLoyalty
+-Dcom.ibm.hybrid.cloud.sample.portfolio.ODMClient/mp-rest/url=http://odmtrader1-ibm-odm-dev:9060/DecisionService/rest/ICP_Trader_Dev_1/determineLoyalty
 -Dcom.ibm.hybrid.cloud.sample.portfolio.WatsonClient/mp-rest/url=https://gateway.watsonplatform.net/tone-analyzer/api/v3/tone?version=2017-09-21&sentences=false
