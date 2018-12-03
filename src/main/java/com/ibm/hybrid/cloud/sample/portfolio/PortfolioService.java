@@ -141,12 +141,36 @@ public class PortfolioService extends Application {
 	private @Inject @RestClient ODMClient odmClient;
 	private @Inject @RestClient WatsonClient watsonClient;
 
+	// Override ODM Client URL if secret is configured to provide URL
+	static {
+		String mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
+		String odmURL = System.getenv("ODM_URL");
+		if (odmURL != null && !odmURL.isEmpty()) {
+			logger.info("Using ODM URL from secret: " + odmURL);
+			System.setProperty(mpUrlPropName, odmURL);
+		} else {
+			logger.info("Using ODM URL from configuration: " + System.getProperty(mpUrlPropName));
+		}
+	}
+
 	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
 	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
 	private @Inject @ConfigProperty(name = "WATSON_ID") String watsonId;
 	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd;
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
+
+	// Override ODM Client URL if secret is configured to provide URL
+	static {
+		String mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
+		String odmURL = System.getenv("STOCKQUOTE_URL");
+		if (odmURL != null && !odmURL.isEmpty()) {
+			logger.info("Using ODM URL from secret: " + odmURL);
+			System.setProperty(mpUrlPropName, odmURL);
+		} else {
+			logger.info("Using ODM URL from configuration: " + System.getProperty(mpUrlPropName));
+		}
+	}
 
 	@GET
 	@Path("/")
