@@ -374,11 +374,11 @@ public class PortfolioService extends Application {
 			double oldCommission = results.getDouble("commission");
 			releaseResults(results);
 
-			shares += oldShares;
-			commission += oldCommission;
-			if (shares > 0) {
-				logger.fine("Running following SQL: UPDATE Stock SET shares = "+shares+", commission = "+commission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				invokeJDBC("UPDATE Stock SET shares = "+shares+", commission = "+commission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+			int newShares = oldShares+shares;
+			double newCommission = oldCommission+commission;
+			if (newShares > 0) {
+				logger.fine("Running following SQL: UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+				invokeJDBC("UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 				//getPortfolio will fill in the price, date and total
 			} else {
 				logger.fine("Running following SQL: DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
@@ -394,7 +394,7 @@ public class PortfolioService extends Application {
 		logger.info("Refreshing portfolio for "+owner);
 		Portfolio portfolio = getPortfolio(owner, request);
 
-		invokeKafka(portfolio, symbol, shares);
+		invokeKafka(portfolio, symbol, shares, commission);
 
 		return portfolio;
 	}
@@ -651,7 +651,7 @@ public class PortfolioService extends Application {
 	}
 
 	/** Send a message to IBM Event Streams via the Kafka APIs */
-	private void invokeKafka(Portfolio portfolio, String symbol, int shares) {
+	private void invokeKafka(Portfolio portfolio, String symbol, int shares, double commission) {
 		if (kafkaAddress == null || kafkaAddress.isEmpty()) {
 			logger.info("IBM Event Streams not configured, so not sending Kafka message about this stock trade");
 			return; //only do the following if Kafka is configured
@@ -663,18 +663,17 @@ public class PortfolioService extends Application {
 			if (kafkaProducer == null) kafkaProducer = new EventStreamsProducer(kafkaAddress, kafkaTopic);
 
 			Date now = new Date();
-			if (timestampFormatter == null) timestampFormatter = new SimpleDateFormat("yyyy-MM-ddThh:mm:ss.SSS");
+			if (timestampFormatter == null) timestampFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
 			String when = timestampFormatter.format(now);
 	
 			double price = -1;
-			double commission = 0;
 			String owner = portfolio.getOwner();
 			JsonObject stock = portfolio.getStocks().getJsonObject(symbol);
 			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
 				price = stock.getJsonNumber("price").doubleValue();
-				commission = stock.getJsonNumber("commission").doubleValue();
 			} else {
-				return; //nothing to send if we can't look up the values
+				logger.warning("Unable to get the stock price.  Skipping sending the StockPurchase to Kafka");
+				return; //nothing to send if we can't look up the stock price
 			}
 	
 			String tradeID = UUID.randomUUID().toString();
