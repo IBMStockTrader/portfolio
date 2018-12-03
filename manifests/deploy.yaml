@@ -112,6 +112,7 @@ spec:
               secretKeyRef:
                 name: odm
                 key: url
+                optional: true
           - name: ODM_ID
             valueFrom:
               secretKeyRef:
