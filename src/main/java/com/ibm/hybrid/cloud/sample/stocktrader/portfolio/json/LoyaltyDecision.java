@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-package com.ibm.hybrid.cloud.sample.portfolio;
+package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
 /** JSON-B POJO class representing an ODM business rule for determining the loyalty level of a portfolio */
 public class LoyaltyDecision {
