@@ -1,4 +1,4 @@
-package it;
+package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.test;
 
 import static org.junit.Assert.assertTrue;
 
