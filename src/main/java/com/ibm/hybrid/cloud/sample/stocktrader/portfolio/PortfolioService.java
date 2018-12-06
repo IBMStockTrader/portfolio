@@ -14,21 +14,18 @@
    limitations under the License.
  */
 
-package com.ibm.hybrid.cloud.sample.portfolio;
+package com.ibm.hybrid.cloud.sample.stocktrader.portfolio;
 
-//Standard HTTP request classes.  Maybe replace these with use of mpRestClient instead...
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client.*;
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.*;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Base64;
-import java.util.Enumeration;
 import java.util.UUID;
 
 //Logging (JSR 47)
@@ -140,18 +137,6 @@ public class PortfolioService extends Application {
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 	private @Inject @RestClient ODMClient odmClient;
 	private @Inject @RestClient WatsonClient watsonClient;
-
-	// Override ODM Client URL if secret is configured to provide URL
-	static {
-		String mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
-		String odmURL = System.getenv("ODM_URL");
-		if (odmURL != null && !odmURL.isEmpty()) {
-			logger.info("Using ODM URL from secret: " + odmURL);
-			System.setProperty(mpUrlPropName, odmURL);
-		} else {
-			logger.info("Using ODM URL from configuration: " + System.getProperty(mpUrlPropName));
-		}
-	}
 
 	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
 	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
