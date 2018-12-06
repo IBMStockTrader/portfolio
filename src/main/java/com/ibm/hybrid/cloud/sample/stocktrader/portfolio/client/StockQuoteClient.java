@@ -16,7 +16,7 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
-
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Quote;
 import javax.enterprise.context.Dependent;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
@@ -35,7 +35,7 @@ public interface StockQuoteClient {
 	@GET
 	@Path("/")
 	@Produces("application/json")
-    public Quote[] getAllCachedQuotes(@HeaderParam("Authorization") String jwt);
+	public Quote[] getAllCachedQuotes(@HeaderParam("Authorization") String jwt);
 
 	@GET
 	@Path("/{symbol}")
