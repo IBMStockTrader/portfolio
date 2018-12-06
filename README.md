@@ -50,8 +50,8 @@ providers simply means updating the *Dockerfile* to copy the *JDBC* jar file int
 the *server.xml* to reference it and specify any database-specific settings.  No *Java* code changes are necessary
 when changing *JDBC* providers.  The database can either be another pod in the same *Kubernetes* environment, or
 it can be running on "bare metal" in a traditional on-premises environment.  Endpoint and credential info is
-specified in the *Kubernetes* secret and made available as environment variables to the server.xml.  See the
-*deploy.yaml* for details.
+specified in the *Kubernetes* secret and made available as environment variables to the server.xml of WebSphere Liberty.  See the
+*manifests/portfolio-values.yaml* for details.
 
 ### Prerequisites for ICP Deployment
  This project requires two secrets: `jwt` and `db2`.  You can get the DB2 values from inspecting your DB2 secrets.
@@ -73,14 +73,18 @@ specified in the *Kubernetes* secret and made available as environment variables
   ```
  
  ### Build and Deploy to ICP
-To build `trader` clone this repo and run:
+To build `portfolio` clone this repo and run:
 ```bash
 mvn package
 docker build -t portfolio:latest -t <ICP_CLUSTER>.icp:8500/stock-trader/portfolio:latest .
 docker tag portfolio:latest <ICP_CLUSTER>.icp:8500/stock-trader/portfolio:latest
 docker push <ICP_CLUSTER>.icp:8500/stock-trader/portfolio:latest
+```
 
-kubectl apply -f manifests/
+Use WebSphere Liberty helm chart to deploy Portfolio microservice to ICP:
+```bash
+helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/
+helm install ibm-charts/ibm-websphere-liberty -f <VALUES_YAML> -n <RELEASE_NAME> --tls
 ```
 
 In practice this means you'll run something like:
@@ -89,5 +93,6 @@ docker build -t portfolio:latest -t mycluster.icp:8500/stock-trader/portfolio:la
 docker tag portfolio:latest mycluster.icp:8500/stock-trader/portfolio:latest
 docker push mycluster.icp:8500/stock-trader/portfolio:latest
 
-kubectl --namespace stock-trader apply -f manifests/
+helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/
+helm install ibm-charts/ibm-websphere-liberty -f manifests/portfolio-values.yaml -n portfolio --namespace stock-trader --tls
 ```
