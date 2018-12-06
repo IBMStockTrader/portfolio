@@ -16,8 +16,8 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
-import com.ibm.hybrid.cloud.sample.stocktrader.portfoliol.json.WatsonInput;
-import com.ibm.hybrid.cloud.sample.stocktrader.portfoliol.json.WatsonOutput;
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.WatsonInput;
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.WatsonOutput;
 import javax.enterprise.context.Dependent;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
