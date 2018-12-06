@@ -15,18 +15,13 @@
 # FROM openliberty/open-liberty:microProfile2
 FROM websphere-liberty:microProfile2
 
-COPY server.xml /config/server.xml
-COPY jvm.options /config/jvm.options
-COPY db2jcc4.jar /config/db2jcc4.jar
-COPY wmq.jmsra.rar /config/wmq.jmsra.rar
+COPY src/main/liberty/config /config/
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-COPY key.jks /config/resources/security/key.jks
-COPY certs.jks /config/resources/security/certs.jks
-COPY keystore.xml /config/configDropins/defaults/keystore.xml
 # COPY ltpa.keys /config/resources/security/ltpa.keys
 
 #apt-get needs root access
 USER root
+RUN chmod g+w /config/apps
 RUN apt-get update
 RUN apt-get install curl -y
 USER 1001
