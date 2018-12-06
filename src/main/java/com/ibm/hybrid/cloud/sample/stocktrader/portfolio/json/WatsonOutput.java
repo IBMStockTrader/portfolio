@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-package com.ibm.hybrid.cloud.sample.portfolio;
+package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
 /** JSON-B POJO class representing a Watson Tone Analyzer output JSON object */
 public class WatsonOutput {
