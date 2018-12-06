@@ -17,7 +17,6 @@ FROM websphere-liberty:microProfile2
 
 COPY src/main/liberty/config /config/
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-# COPY ltpa.keys /config/resources/security/ltpa.keys
 
 #apt-get needs root access
 USER root
