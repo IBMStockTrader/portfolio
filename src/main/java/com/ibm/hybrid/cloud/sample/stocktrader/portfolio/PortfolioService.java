@@ -36,6 +36,7 @@ import java.util.logging.Logger;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import javax.sql.DataSource;
 
@@ -97,6 +98,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.Path;
+import javax.ws.rs.WebApplicationException;
 
 
 @ApplicationPath("/")
@@ -109,6 +111,7 @@ public class PortfolioService extends Application {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
 
 	private static final double ERROR            = -1.0;
+	private static final int    CONFLICT         = 409; //odd that JAX-RS has no ConflictException
 
 	private static final String NOTIFICATION_Q   = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF = "jms/Portfolio/NotificationQueueConnectionFactory";
@@ -218,7 +221,13 @@ public class PortfolioService extends Application {
 			portfolio = new Portfolio(owner, 0.0, "Basic", 50.0, 0.0, 0, "Unknown", 9.99);
 
 			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
-			invokeJDBC("INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
+			try {
+				invokeJDBC("INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
+			} catch (SQLIntegrityConstraintViolationException dupKey) {
+				logger.warning("Portfolio already exists for: "+owner);
+				logException(dupKey);
+				throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);
+			}
 			logger.info("Portfolio created successfully");
 		}
 
@@ -436,6 +445,7 @@ public class PortfolioService extends Application {
 		}
 
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		int freeTrades = portfolio.getFree();
 
 		try {
 			String credentials = watsonId + ":" + watsonPwd; //Watson accepts basic auth
@@ -451,7 +461,7 @@ public class PortfolioService extends Application {
 		}
 
 		Feedback feedback = getFeedback(owner, sentiment);
-		int freeTrades = feedback.getFree();
+		freeTrades += feedback.getFree();
 
 		logger.fine("Running following JDBC command: UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
 		invokeJDBC("UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
