@@ -16,7 +16,7 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
-
+import com.ibm.hybrid.cloud.sample.stocktrader.portfoliol.json.WatsonInput;
 import javax.enterprise.context.Dependent;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
@@ -33,8 +33,8 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 /** mpRestClient "remote" interface for the stock quote microservice */
 public interface WatsonClient {
 	@POST
-    @Path("/")
-    @Consumes("application/json")
+	@Path("/")
+	@Consumes("application/json")
 	@Produces("application/json")
-    public WatsonOutput getTone(@HeaderParam("Authorization") String basicAuth, WatsonInput input);
+	public WatsonOutput getTone(@HeaderParam("Authorization") String basicAuth, WatsonInput input);
 }
