@@ -177,3 +177,6 @@ ingress:
   annotations: 
     ingress.kubernetes.io/app-root: "/portfolio"
     nginx.ingress.kubernetes.io/app-root: "/portfolio"
+
+monitoring:
+  enabled: true
