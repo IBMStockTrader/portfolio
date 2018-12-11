@@ -152,7 +152,7 @@ public class PortfolioService extends Application {
 	static {
 		String mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
 		String odmURL = System.getenv("STOCKQUOTE_URL");
-		if (odmURL != null && !odmURL.isEmpty()) {
+		if ((odmURL != null) && !odmURL.isEmpty()) {
 			logger.info("Using ODM URL from secret: " + odmURL);
 			System.setProperty(mpUrlPropName, odmURL);
 		} else {
