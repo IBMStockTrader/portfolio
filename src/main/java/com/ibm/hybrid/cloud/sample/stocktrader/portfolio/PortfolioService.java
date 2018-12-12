@@ -151,12 +151,12 @@ public class PortfolioService extends Application {
 	// Override ODM Client URL if secret is configured to provide URL
 	static {
 		String mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
-		String odmURL = System.getenv("STOCKQUOTE_URL");
+		String odmURL = System.getenv("ODM_URL");
 		if ((odmURL != null) && !odmURL.isEmpty()) {
 			logger.info("Using ODM URL from secret: " + odmURL);
 			System.setProperty(mpUrlPropName, odmURL);
 		} else {
-			logger.info("Using ODM URL from configuration: " + System.getProperty(mpUrlPropName));
+			logger.info("ODM URL not found from env var from secret, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 	}
 
