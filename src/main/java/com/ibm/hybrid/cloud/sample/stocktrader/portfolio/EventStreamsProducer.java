@@ -69,8 +69,9 @@ public class EventStreamsProducer {
         properties.put(ProducerConfig.RETRIES_CONFIG, 0);
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        properties.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
         properties.put(SslConfigs.SSL_PROTOCOL_CONFIG, "TLSv1.2");
-        properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, "resources/security/certs.jks");
+        properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, "/output/resources/security/certs.jks");
         properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, "password");
         properties.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
         String saslJaasConfig = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\""
