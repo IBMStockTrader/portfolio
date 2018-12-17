@@ -22,6 +22,7 @@ COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
 #apt-get needs root access
 USER root
 RUN chmod g+w /config/apps
+RUN chmod g+w /output/resources/security
 RUN apt-get update
 RUN apt-get install curl -y
 USER 1001
