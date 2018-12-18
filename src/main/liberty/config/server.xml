@@ -16,7 +16,7 @@
 
 <server description="Portfolio server">
     <featureManager>
-        <feature>microProfile-2.0</feature> <!-- defines mpJwt-1.0, among others -->
+        <feature>microProfile-2.1</feature> <!-- defines mpJwt-1.0, among others -->
         <feature>jdbc-4.2</feature>
         <feature>jms-2.0</feature>
         <feature>jca-1.7</feature>
@@ -29,7 +29,7 @@
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
     
-    <keyStore id="defaultKeyStore" location="/output/resources/security/key.jks" password="passw0rd"/>
+    <keyStore id="defaultKeyStore" location="${server.config.dir}/resources/security/key.jks" password="passw0rd"/>
 
     <sslDefault sslRef="RpSSLConfig" />
 
