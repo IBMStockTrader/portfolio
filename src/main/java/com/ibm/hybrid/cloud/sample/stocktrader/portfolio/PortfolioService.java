@@ -700,7 +700,7 @@ public class PortfolioService extends Application {
 			String message = purchase.toString();
 	
 			kafkaProducer.produce(message); //publish the serialized JSON to our Kafka topic in IBM Event Streams
-			logger.info("Delivered meesage to Kafka: "+message);
+			logger.info("Delivered message to Kafka: "+message);
 		} catch (Throwable t) {
 			logger.warning("Failure sending message to Kafka");
 			logException(t);
