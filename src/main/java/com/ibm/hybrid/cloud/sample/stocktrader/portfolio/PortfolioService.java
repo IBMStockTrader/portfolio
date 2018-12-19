@@ -143,7 +143,7 @@ public class PortfolioService extends Application {
 
 	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
 	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
-	private @Inject @ConfigProperty(name = "WATSON_ID") String watsonId;
+	private @Inject @ConfigProperty(name = "WATSON_ID", defaultValue = "apikey") String watsonId;
 	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd;
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
