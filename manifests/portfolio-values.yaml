@@ -95,6 +95,7 @@ image:
         secretKeyRef:
           name: watson
           key: id
+          optional: true
     - name: WATSON_PWD
       valueFrom:
         secretKeyRef:
