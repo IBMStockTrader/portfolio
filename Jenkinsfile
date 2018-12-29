@@ -1,7 +1,23 @@
-#!groovy
+pipeline {  
+    environment {
+         imagename = "portfolio"
+     }
 
-@Library('MicroserviceBuilder') _
-microserviceBuilderPipeline {
-  image = 'portfolio'
-  test = 'false'
+    agent any
+    stages {
+       stage('Build') { 
+          steps {
+              sh 'mvn clean package' 
+          }
+       }  
+       stage('Deliver') {
+            steps {
+                script {
+                    docker.build imagename
+                }
+                sh '/push2dockerhub.sh $imagename'
+            }
+       }
+    }
+
 }
