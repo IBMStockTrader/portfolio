@@ -27,10 +27,8 @@ spec:
     spec:
       containers:
       - name: portfolio
-#       image: portfolio:latest # Microservice Builder
-#       image: mycluster.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
-#       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Container Service
-        image: ibmstocktrader/portfolio:latest # Docker Hub
+        image: stocktraderdemo/portfolio:latest # Docker Hub
+        imagePullPolicy: Always
         env:
           - name: JDBC_HOST
             valueFrom:
@@ -163,7 +161,6 @@ spec:
         ports:
           - containerPort: 9080
           - containerPort: 9443
-        imagePullPolicy: Always
 ---
 #Deploy the service
 apiVersion: v1

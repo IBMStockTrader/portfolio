@@ -21,7 +21,7 @@ image:
   # repository: portfolio # Microservice Builder
   # repository: mycluster.icp:8500/stock-trader/portfolio # IBM Cloud Private
   # repository: registry.ng.bluemix.net/stock_trader/portfolio # IBM Container Service
-  repository: ibmstocktrader/portfolio # Docker Hub
+  repository: stocktraderdemo/portfolio # Docker Hub
   tag: latest
   pullPolicy: Always
   extraEnvs:
