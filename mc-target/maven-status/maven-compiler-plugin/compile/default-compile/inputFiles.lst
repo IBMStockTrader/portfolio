@@ -1,0 +1,17 @@
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/Quote.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/Feedback.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/WatsonTone.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/ODMLoyaltyRule.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/Stock.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/Portfolio.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/WatsonDocument.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/client/StockQuoteClient.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/WatsonInput.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/StockPurchase.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/client/WatsonClient.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/EventStreamsProducer.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/client/ODMClient.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/LoyaltyDecision.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/LoyaltyChange.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/json/WatsonOutput.java
+/microclimate-workspace/portfolio/src/main/java/com/ibm/hybrid/cloud/sample/stocktrader/portfolio/PortfolioService.java
