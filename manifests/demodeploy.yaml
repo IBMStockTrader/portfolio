@@ -28,7 +28,7 @@ spec:
       containers:
       - name: portfolio
 #       image: portfolio:latest # Microservice Builder
-        image: bigloon.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
+        image: bigloon.icp:8500/stock-trader/portfolio:demo # IBM Cloud Private
 #       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Container Service
 #        image: ibmstocktrader/portfolio:latest # Docker Hub
         env:
