@@ -779,6 +779,9 @@ public class PortfolioService extends Application {
 				iterations = 10;
 			else if(owner.equalsIgnoreCase("ED"))
 				iterations = 20;
+			else if(owner.equalsIgnoreCase("JB")) {
+				this.memoryLeakTable.clear(); // clear the leak
+			}
 		}
 		
 		
