@@ -25,6 +25,7 @@ import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -148,6 +149,8 @@ public class PortfolioService extends Application {
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
+	private HashMap<String, byte[]> memoryLeakTable = new HashMap<>();
+	
 	// Override ODM Client URL if secret is configured to provide URL
 	static {
 		String mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
@@ -242,6 +245,8 @@ public class PortfolioService extends Application {
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		Portfolio newPortfolio = null;
 
+		createMemoryLeak(owner);
+		
 		Portfolio oldPortfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 		if (oldPortfolio != null) {
 			String oldLoyalty = oldPortfolio.getLoyalty();
@@ -762,6 +767,35 @@ public class PortfolioService extends Application {
 			StringWriter writer = new StringWriter();
 			t.printStackTrace(new PrintWriter(writer));
 			logger.info(writer.toString());
+		}
+	}
+	
+	private void createMemoryLeak(String owner) {
+		
+		int iterations = 0;
+		
+		if(owner != null) {
+			if(owner.equalsIgnoreCase("RG"))
+				iterations = 10;
+			else if(owner.equalsIgnoreCase("ED"))
+				iterations = 20;
+		}
+		
+		
+		if(iterations > 0) {
+			// Create 10 MB leak
+			long initFreeMemory = Runtime.getRuntime().freeMemory();
+			
+			for(int i = 0; i < iterations; i++) {
+				byte[] leakObject = new byte[1000000];
+				String key = "" + System.currentTimeMillis();
+				this.memoryLeakTable.put(key, leakObject);
+			}
+			
+			long currentFreeMemory = Runtime.getRuntime().freeMemory();
+			
+			logger.info("Owner: " + owner +  " leaked memory, initial free memory: " 
+			            + initFreeMemory + " Current Free Memory: " + currentFreeMemory );
 		}
 	}
 }
