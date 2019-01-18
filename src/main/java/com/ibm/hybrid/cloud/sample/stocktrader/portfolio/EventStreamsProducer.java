@@ -40,7 +40,8 @@ public class EventStreamsProducer {
 
     private final String topic;
     private final String USERNAME = System.getenv("KAFKA_USER");
-    private final String API_KEY = System.getenv("KAFKA_API_KEY");
+    private final String API_KEY  = System.getenv("KAFKA_API_KEY");
+    private final String KEYSTORE = System.getenv("KAFKA_KEYSTORE");
 
     private KafkaProducer<String, String> kafkaProducer;
     
@@ -61,6 +62,10 @@ public class EventStreamsProducer {
     }
 
     private KafkaProducer<String, String> createProducer(String brokerList) {
+        //provide defaults if not customized via environment variables
+        if (USERNAME==null) USERNAME = "token";
+        if (KEYSTORE==null) KEYSTORE = "/config/resources/security/certs.jks";
+
         Properties properties = new Properties();
         properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, brokerList);
         properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
@@ -69,9 +74,9 @@ public class EventStreamsProducer {
         properties.put(ProducerConfig.RETRIES_CONFIG, 0);
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        properties.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
+//      properties.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
         properties.put(SslConfigs.SSL_PROTOCOL_CONFIG, "TLSv1.2");
-        properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, "/config/resources/security/certs.jks");
+        properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, KEYSTORE);
         properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, "password");
         properties.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
         String saslJaasConfig = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\""
