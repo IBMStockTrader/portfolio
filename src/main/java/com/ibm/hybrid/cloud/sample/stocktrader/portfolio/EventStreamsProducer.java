@@ -39,9 +39,9 @@ import org.apache.kafka.common.serialization.StringSerializer;
 public class EventStreamsProducer {
 
     private final String topic;
-    private final String USERNAME = System.getenv("KAFKA_USER");
     private final String API_KEY  = System.getenv("KAFKA_API_KEY");
-    private final String KEYSTORE = System.getenv("KAFKA_KEYSTORE");
+    private String USERNAME = System.getenv("KAFKA_USER");
+    private String KEYSTORE = System.getenv("KAFKA_KEYSTORE");
 
     private KafkaProducer<String, String> kafkaProducer;
     
