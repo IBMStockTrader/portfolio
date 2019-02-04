@@ -137,7 +137,8 @@ public class PortfolioService extends Application {
 
 	private static EventStreamsProducer kafkaProducer = null;
 
-	private @Inject @RestClient StockQuoteClient stockQuoteClient;
+    private @Inject @RestClient StockQuoteClient stockQuoteClient;
+    private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
 	private @Inject @RestClient ODMClient odmClient;
 	private @Inject @RestClient WatsonClient watsonClient;
 
@@ -374,7 +375,14 @@ public class PortfolioService extends Application {
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
 		return portfolio;
-	}
+    }
+    
+    @GET
+    @Path("/{owner}/returns")
+    @Produces("application/json")
+    public String getPortfolioReturns(@PathParam("owner") String owner, @QueryParam("currentValue") Double portfolioValue) {
+        return tradeHistoryClient.getReturns(owner, portfolioValue);
+    }
 
 	@PUT
 	@Path("/{owner}")
