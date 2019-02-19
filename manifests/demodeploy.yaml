@@ -176,6 +176,13 @@ spec:
             port: 9080
           initialDelaySeconds: 60
           periodSeconds: 5
+        resources:
+          limits:
+            cpu:     200m
+            memory:  256Mi
+          requests:
+            cpu:     200m
+            memory:  256Mi
 ---
 #Deploy the service
 apiVersion: v1
