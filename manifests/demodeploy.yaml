@@ -178,11 +178,11 @@ spec:
           periodSeconds: 5
         resources:
           limits:
-            cpu:     200m
-            memory:  256Mi
+            cpu: 500m
+            memory: 500Mi
           requests:
-            cpu:     100m
-            memory:  128Mi
+            cpu: 100m
+            memory: 128Mi
 ---
 #Deploy the service
 apiVersion: v1
