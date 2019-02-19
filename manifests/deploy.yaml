@@ -171,6 +171,18 @@ spec:
           - containerPort: 9080
           - containerPort: 9443
         imagePullPolicy: Always
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9080
+          initialDelaySeconds: 60
+          periodSeconds: 5
       #  Uncomment the following lines to get the keystore from the secret
       #  volumeMounts:
       #  - mountPath: /keystores
