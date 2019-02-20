@@ -150,6 +150,13 @@ spec:
                 name: kafka
                 key: api-key
                 optional: true
+          # location of the keystore.  See below comments about volumeMount
+          - name: KAFKA_KEYSTORE
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: keystore
+                optional: true
           - name: JWT_AUDIENCE
             valueFrom:
               secretKeyRef:
@@ -183,6 +190,15 @@ spec:
           requests:
             cpu: 100m
             memory: 128Mi
+      #  Uncomment the following lines to get the keystore from the secret
+        volumeMounts:
+        - mountPath: /keystores
+          name: kafka-keystore-volume
+          readOnly: true
+      volumes:
+      - name: kafka-keystore-volume
+        secret:
+          secretName: kafka-keystore
 ---
 #Deploy the service
 apiVersion: v1
