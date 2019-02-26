@@ -47,6 +47,15 @@ import javax.enterprise.context.ApplicationScoped;
 //mpConfig 1.2
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+//mpHealth 1.0
+import org.eclipse.microprofile.health.Health;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
+
+//mpJWT 1.1
+import org.eclipse.microprofile.auth.LoginConfig;
+
 //mpMetrics 1.1
 import org.eclipse.microprofile.metrics.annotation.Counted;
 
@@ -89,6 +98,7 @@ import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ApplicationPath;
+import javax.ws.rs.BadRequestException; //400 error
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -104,15 +114,19 @@ import javax.ws.rs.WebApplicationException;
 
 @ApplicationPath("/")
 @Path("/")
+@Health
+@LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
 @ApplicationScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
-public class PortfolioService extends Application {
+public class PortfolioService extends Application implements HealthCheck {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
 
 	private static final double ERROR            = -1.0;
-	private static final int    CONFLICT         = 409; //odd that JAX-RS has no ConflictException
+	private static final int    CONFLICT         = 409;    //odd that JAX-RS has no ConflictException
+	private static final short  MAX_ERRORS       = 3;      //health check will fail if this threshold is met
+	private static final String FAIL             = "FAIL"; //trying to create a portfolio with this name will always throw a 400
 
 	private static final String NOTIFICATION_Q   = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF = "jms/Portfolio/NotificationQueueConnectionFactory";
@@ -125,6 +139,7 @@ public class PortfolioService extends Application {
 	private static final String PLATINUM = "Platinum";
 
 	private boolean initialized = false;
+	private static short consecutiveErrors = 0; //used in health check
 
 	private InitialContext context = null;
 
@@ -160,6 +175,24 @@ public class PortfolioService extends Application {
 		} else {
 			logger.info("ODM URL not found from env var from secret, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
+	}
+
+	public static boolean isHealthy() {
+		return consecutiveErrors>MAX_ERRORS;
+	}
+
+	//mpHealth liveness check
+	@Override
+	public HealthCheckResponse call() {
+		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio").withData("consecutiveErrors", consecutiveErrors);
+		if (isHealthy()) {
+			builder = builder.up();
+			logger.info("Returning healthy!");
+		} else {
+			builder = builder.down();
+			logger.info("Returning NOT healthy!");
+		}
+		return builder.build();
 	}
 
 	@GET
@@ -217,6 +250,12 @@ public class PortfolioService extends Application {
 	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
 		Portfolio portfolio = null;
 		if (owner != null) {
+			if (owner.equalsIgnoreCase(FAIL)) {
+				logger.warning("Throwing a 400 error for onwer: "+owner);
+				consecutiveErrors++;
+				throw new BadRequestException("Invalid value for portfolio owner: "+owner);
+			}
+
 			logger.info("Creating portfolio for "+owner);
 
 			//total=0.0, loyalty="Basic", balance=50.0, commissions=0.0, free=0, sentiment="Unknown", nextCommission=9.99
@@ -377,7 +416,7 @@ public class PortfolioService extends Application {
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
 		return portfolio;
     }
-    
+
     @GET
     @Path("/{owner}/returns")
     @Produces(MediaType.TEXT_PLAIN)
