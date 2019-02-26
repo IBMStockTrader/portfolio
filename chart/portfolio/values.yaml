@@ -47,5 +47,8 @@ base:
 istio:
   enabled: false
   weight: 100
+kafka:
+  user: token
+  keystorePath: /keystores/certs.jks
 generatedBindings:
   enabled: true

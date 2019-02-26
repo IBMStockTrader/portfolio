@@ -27,10 +27,18 @@ spec:
         app: "{{  .Chart.Name }}-selector"
         version: "current"
     spec:
+      volumes:
+      - name: kafka-keystore-volume
+        secret:
+          secretName: kafka-keystore
       containers:
       - name: "{{  .Chart.Name  }}"
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - name: kafka-keystore-volume
+          mountPath: /keystores
+          readOnly: true
 {{ if .Values.istio.enabled }}
         readinessProbe:
           httpGet:
@@ -144,27 +152,25 @@ spec:
           - name: KAFKA_TOPIC
             valueFrom:
               secretKeyRef:
-                name: kafka
+                name: kafka-extra
                 key: topic
                 optional: true
           - name: KAFKA_ADDRESS
             valueFrom:
               secretKeyRef:
-                name: kafka
-                key: address
-                optional: true
-          - name: KAFKA_USER
-            valueFrom:
-              secretKeyRef:
-                name: kafka
-                key: user
+                name: kafka-producer
+                key: url
                 optional: true
           - name: KAFKA_API_KEY
             valueFrom:
               secretKeyRef:
-                name: kafka
-                key: api-key
+                name: kafka-producer
+                key: apikey
                 optional: true
+          - name: KAFKA_USER
+            value: {{ .Values.kafka.user }}
+          - name: KAFKA_KEYSTORE
+            value: {{ .Values.kafka.keystorePath }}
           - name: JWT_AUDIENCE
             valueFrom:
               secretKeyRef:
