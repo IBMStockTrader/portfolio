@@ -87,6 +87,7 @@ import javax.servlet.http.HttpServletRequest;
 //JAX-RS 2.0 (JSR 339)
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -137,7 +138,8 @@ public class PortfolioService extends Application {
 
 	private static EventStreamsProducer kafkaProducer = null;
 
-	private @Inject @RestClient StockQuoteClient stockQuoteClient;
+    private @Inject @RestClient StockQuoteClient stockQuoteClient;
+    private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
 	private @Inject @RestClient ODMClient odmClient;
 	private @Inject @RestClient WatsonClient watsonClient;
 
@@ -162,7 +164,7 @@ public class PortfolioService extends Application {
 
 	@GET
 	@Path("/")
-	@Produces("application/json")
+	@Produces(MediaType.APPLICATION_JSON)
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio[] getPortfolios() throws SQLException {
 		ArrayList<Portfolio> portfolioList = new ArrayList<Portfolio>();
@@ -209,7 +211,7 @@ public class PortfolioService extends Application {
 
 	@POST
 	@Path("/{owner}")
-	@Produces("application/json")
+	@Produces(MediaType.APPLICATION_JSON)
 	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
@@ -236,7 +238,7 @@ public class PortfolioService extends Application {
 
 	@GET
 	@Path("/{owner}")
-	@Produces("application/json")
+	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
@@ -374,11 +376,19 @@ public class PortfolioService extends Application {
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
 		return portfolio;
-	}
+    }
+    
+    @GET
+    @Path("/{owner}/returns")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
+        Double portfolioValue = getPortfolio(owner, request).getTotal();
+        return tradeHistoryClient.getReturns(owner, portfolioValue);
+    }
 
 	@PUT
 	@Path("/{owner}")
-	@Produces("application/json")
+	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
@@ -419,7 +429,7 @@ public class PortfolioService extends Application {
 
 	@DELETE
 	@Path("/{owner}")
-	@Produces("application/json")
+	@Produces(MediaType.APPLICATION_JSON)
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
@@ -433,8 +443,8 @@ public class PortfolioService extends Application {
 
 	@POST
 	@Path("/{owner}/feedback")
-	@Consumes("application/json")
-	@Produces("application/json")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
