@@ -27,6 +27,8 @@ via *JDBC*.  The following operations are available:
 
 `DELETE /{owner}` - removes the portfolio for the specified owner.
 
+`GET /{owner}/returns` - gets the return on investment for this portfolio.
+
 `POST /{owner}/feedback` - submits feedback (to the Watson Tone Analyzer)
 
 All operations return *JSON*.  A *portfolio* object contains fields named *owner*, *total*, *loyalty*, *balance*,
@@ -50,8 +52,8 @@ providers simply means updating the *Dockerfile* to copy the *JDBC* jar file int
 the *server.xml* to reference it and specify any database-specific settings.  No *Java* code changes are necessary
 when changing *JDBC* providers.  The database can either be another pod in the same *Kubernetes* environment, or
 it can be running on "bare metal" in a traditional on-premises environment.  Endpoint and credential info is
-specified in the *Kubernetes* secret and made available as environment variables to the server.xml of WebSphere Liberty.  See the
-*manifests/portfolio-values.yaml* for details.
+specified in the *Kubernetes* secret and made available as environment variables to the server.xml of WebSphere
+Liberty.  See the *manifests/portfolio-values.yaml* for details.
 
 ### Prerequisites for ICP Deployment
  This project requires two secrets: `jwt` and `db2`.  You can get the DB2 values from inspecting your DB2 secrets.
