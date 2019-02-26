@@ -89,6 +89,8 @@ public class EventStreamsProducer {
             kafkaProducer = new KafkaProducer<>(properties);
         } catch (KafkaException kafkaError ) {
             logger.warning("Error while creating producer: "+kafkaError.getMessage());
+            Throwable cause = kafkaError.getCause();
+            if (cause != null) logger.warning("Caused by: "+cause.getMessage());
             throw kafkaError;
         }
         return kafkaProducer;
