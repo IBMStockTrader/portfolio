@@ -2,10 +2,12 @@
 <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd" version="3.1" metadata-complete="false">
 	<display-name>Portfolio</display-name>
 	<description>Portfolio microservice from the Stock Trader application</description>
+	<!-- Doing this via @LoginConfig in the Java code now instead
 	<login-config>
 		<auth-method>MP-JWT</auth-method>
 		<realm-name>MP-JWT</realm-name>
 	</login-config>
+	-->
 	<security-role>
 		<description>Group with read-only access to stock portfolios</description>
 		<role-name>StockViewer</role-name>
