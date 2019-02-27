@@ -156,8 +156,8 @@ public class PortfolioService extends Application implements HealthCheck {
 
 	private @Inject HttpServletRequest request;
 
-    private @Inject @RestClient StockQuoteClient stockQuoteClient;
-    private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
+	private @Inject @RestClient StockQuoteClient stockQuoteClient;
+	private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
 	private @Inject @RestClient ODMClient odmClient;
 	private @Inject @RestClient WatsonClient watsonClient;
 
@@ -180,7 +180,7 @@ public class PortfolioService extends Application implements HealthCheck {
 		}
 	}
 
-    public static boolean isReady() { //determines answer to readiness probe
+	public static boolean isReady() { //determines answer to readiness probe
 		if (!staticInitialized) try{
 			staticInitialize();
 		} catch (Throwable t) {
@@ -201,7 +201,11 @@ public class PortfolioService extends Application implements HealthCheck {
 
 		String probeType = null;
 		if (request!=null) { //determine if this is a readiness or liveness probe
+			try {
 			probeType = request.getHeader("ProbeType");
+			} catch (Throwable t) {
+				logException(t);
+			}
 		} else {
 			logger.warning("Failure injecting HttpServletRequest");
 		}
@@ -229,7 +233,7 @@ public class PortfolioService extends Application implements HealthCheck {
 				builder = builder.down();
 			}
 		} else {
-			logger.warning("ProbeType http header not set");
+			logger.warning("ProbeType http header not set - telling Kubernetes to kill this pod");
 			builder = builder.down();
 		}
 		return builder.build();
@@ -456,15 +460,15 @@ public class PortfolioService extends Application implements HealthCheck {
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
 		return portfolio;
-    }
+	}
 
-    @GET
-    @Path("/{owner}/returns")
-    @Produces(MediaType.TEXT_PLAIN)
-    public String getPortfolioReturns(@PathParam("owner") String owner) throws IOException, SQLException {
-        Double portfolioValue = getPortfolio(owner).getTotal();
-        return tradeHistoryClient.getReturns(owner, portfolioValue);
-    }
+	@GET
+	@Path("/{owner}/returns")
+	@Produces(MediaType.TEXT_PLAIN)
+	public String getPortfolioReturns(@PathParam("owner") String owner) throws IOException, SQLException {
+		Double portfolioValue = getPortfolio(owner).getTotal();
+		return tradeHistoryClient.getReturns(owner, portfolioValue);
+	}
 
 	@PUT
 	@Path("/{owner}")
@@ -736,8 +740,7 @@ public class PortfolioService extends Application implements HealthCheck {
 		logger.info("Released JDBC resources");
 	}
 
-	/** Send a JSON message to our notification queue.
-	 */
+	/** Send a JSON message to our notification queue. */
 	@Traced
 	private void invokeJMS(Object json) throws JMSException, NamingException {
 		if (!initialized) initialize(); //gets our JMS managed resources (Q and QCF)
