@@ -175,14 +175,21 @@ spec:
           httpGet:
             path: /health
             port: 9080
+            httpHeaders:
+              - name: ProbeType
+                value: readiness
           initialDelaySeconds: 30
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /health
             port: 9080
+            httpHeaders:
+              - name: ProbeType
+                value: liveness
           initialDelaySeconds: 60
           periodSeconds: 5
+
       #  Uncomment the following lines to get the keystore from the secret
       #  volumeMounts:
       #  - mountPath: /keystores
