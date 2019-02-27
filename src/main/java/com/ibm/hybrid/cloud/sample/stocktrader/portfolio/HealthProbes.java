@@ -30,8 +30,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.ServiceUnavailableException; //503
 
 
-@ApplicationPath("/health")
-@Path("/")
+@ApplicationPath("health")
 /** Implement the Kubernetes readiness and liveness probes */
 public class HealthProbes extends Application {
 	private static Logger logger = Logger.getLogger(HealthProbes.class.getName());
