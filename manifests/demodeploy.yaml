@@ -180,6 +180,7 @@ spec:
                 value: readiness
           initialDelaySeconds: 30
           periodSeconds: 5
+          failureThreshold: 5
         livenessProbe:
           httpGet:
             path: /portfolio/health/liveness
@@ -189,6 +190,7 @@ spec:
                 value: liveness
           initialDelaySeconds: 60
           periodSeconds: 5
+          failureThreshold: 5
         resources:
           limits:
             cpu: 500m
