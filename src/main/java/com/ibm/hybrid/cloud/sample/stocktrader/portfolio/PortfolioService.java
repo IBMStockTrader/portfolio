@@ -124,9 +124,11 @@ public class PortfolioService extends Application implements HealthCheck {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
 
 	private static final double ERROR            = -1.0;
-	private static final int    CONFLICT         = 409;    //odd that JAX-RS has no ConflictException
-	private static final short  MAX_ERRORS       = 3;      //health check will fail if this threshold is met
-	private static final String FAIL             = "FAIL"; //trying to create a portfolio with this name will always throw a 400
+	private static final int    CONFLICT         = 409;         //odd that JAX-RS has no ConflictException
+	private static final short  MAX_ERRORS       = 3;           //health check will fail if this threshold is met
+	private static final String FAIL             = "FAIL";      //trying to create a portfolio with this name will always throw a 400
+	private static final String READINESS        = "readiness"; //header value from yaml for readiness probe
+	private static final String LIVENESS         = "liveness";  //header value from yaml for liveness probe
 
 	private static final String NOTIFICATION_Q   = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF = "jms/Portfolio/NotificationQueueConnectionFactory";
@@ -138,15 +140,14 @@ public class PortfolioService extends Application implements HealthCheck {
 	private static final String GOLD     = "Gold";
 	private static final String PLATINUM = "Platinum";
 
-	private boolean initialized = false;
+	private static boolean initialized = false;
+	private static boolean staticInitialized = false;
 	private static short consecutiveErrors = 0; //used in health check
 
-	private InitialContext context = null;
+	private static Queue queue = null;
+	private static QueueConnectionFactory queueCF = null;
 
-	private Queue queue = null;
-	private QueueConnectionFactory queueCF = null;
-
-	private DataSource datasource = null;
+	private static DataSource datasource = null;
 
 	private static SimpleDateFormat dateFormatter = null;
 	private static SimpleDateFormat timestampFormatter = null;
@@ -179,21 +180,54 @@ public class PortfolioService extends Application implements HealthCheck {
 		}
 	}
 
-	public static boolean isHealthy() {
+    public static boolean isReady() { //determines answer to readiness probe
+		if (!staticInitialized) try{
+			initialize(null);
+		} catch (Throwable t) { logException(t); }
+		return (datasource!=null); //the only hard prereq for Portfolio is that JDBC is configured properly
+	}
+
+	public static boolean isHealthy() { //determines answer to livenesss probe
 		return consecutiveErrors<MAX_ERRORS;
 	}
 
-	//mpHealth liveness check
+	//mpHealth probe
 	@Override
 	public HealthCheckResponse call() {
-		logger.info(request==null ? "HttpServletRequest injection failed" :  "HttpServletRequest injection successful");
-		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio").withData("consecutiveErrors", consecutiveErrors);
-		if (isHealthy()) {
-			builder = builder.up();
-			logger.fine("Returning healthy!");
+		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
+
+		String probeType = null;
+		if (request!=null) { //determine if this is a readiness or liveness probe
+			probeType = request.getHeader("ProbeType");
 		} else {
+			logger.warning("Failure injecting HttpServletRequest");
+		}
+
+		if (probeType!=null) {
+			if (probeType.equals(READINESS)) { //this is a readiness probe
+				if (isHealthy()) {
+					builder = builder.up();
+					logger.fine("Returning ready!");
+				} else {
+					builder = builder.down();
+					logger.info("Returning NOT ready!");
+				}
+			} else if (probeType.equals(LIVENESS)) { //this is a liveness probe
+				builder = builder.withData("consecutiveErrors", consecutiveErrors);
+				if (isHealthy()) {
+					builder = builder.up();
+					logger.fine("Returning healthy!");
+				} else {
+					builder = builder.down();
+					logger.info("Returning NOT healthy!");
+				}
+			} else {
+				logger.warning("Unable to determine Kubernetes probe type: "+probeType);
+				builder = builder.down();
+			}
+		} else {
+			logger.warning("ProbeType http header not set");
 			builder = builder.down();
-			logger.info("Returning NOT healthy!");
 		}
 		return builder.build();
 	}
@@ -284,7 +318,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
+	public Portfolio getPortfolio(@PathParam("owner") String owner) throws IOException, SQLException {
 		Portfolio newPortfolio = null;
 
 		Portfolio oldPortfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
@@ -368,7 +402,7 @@ public class PortfolioService extends Application implements HealthCheck {
 
 			portfolio.setTotal(overallTotal);
 
-			String loyalty = processLoyaltyLevel(request, owner, overallTotal, oldLoyalty);
+			String loyalty = processLoyaltyLevel(owner, overallTotal, oldLoyalty);
 			portfolio.setLoyalty(loyalty);
 
 			int free = oldPortfolio.getFree();
@@ -424,8 +458,8 @@ public class PortfolioService extends Application implements HealthCheck {
     @GET
     @Path("/{owner}/returns")
     @Produces(MediaType.TEXT_PLAIN)
-    public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-        Double portfolioValue = getPortfolio(owner, request).getTotal();
+    public String getPortfolioReturns(@PathParam("owner") String owner) throws IOException, SQLException {
+        Double portfolioValue = getPortfolio(owner).getTotal();
         return tradeHistoryClient.getReturns(owner, portfolioValue);
     }
 
@@ -434,7 +468,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
+	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares) throws IOException, SQLException {
 		double commission = processCommission(owner); //throws a 404 if not found
 
 		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
@@ -463,7 +497,7 @@ public class PortfolioService extends Application implements HealthCheck {
 
 		//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
 		logger.info("Refreshing portfolio for "+owner);
-		Portfolio portfolio = getPortfolio(owner, request);
+		Portfolio portfolio = getPortfolio(owner);
 
 		invokeKafka(portfolio, symbol, shares, commission);
 
@@ -492,7 +526,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
 		try {
-			initialize();
+			initialize(this);
 		} catch (NamingException ne) {
 			logger.warning("Error occurred during initialization");
 		}
@@ -542,7 +576,7 @@ public class PortfolioService extends Application implements HealthCheck {
 		return feedback;
 	}
 
-	private String processLoyaltyLevel(HttpServletRequest request, String owner, double overallTotal, String oldLoyalty) {
+	private String processLoyaltyLevel(String owner, double overallTotal, String oldLoyalty) {
 		String loyalty = null;
 		ODMLoyaltyRule input = new ODMLoyaltyRule(overallTotal);
 		try {
@@ -589,11 +623,11 @@ public class PortfolioService extends Application implements HealthCheck {
 	}
 
 	@Traced
-	private void initialize() throws NamingException {
-		if (!initialized) try {
+	private static void initialize(PortfolioService portfolioService) throws NamingException {
+		if (!staticInitialized) try {
 			logger.info("Obtaining JDBC Datasource");
 
-			context = new InitialContext();
+			InitialContext context = new InitialContext();
 			datasource = (DataSource) context.lookup("jdbc/Portfolio/PortfolioDB");
 
 			logger.info("JDBC Datasource successfully obtained!"); //exception would have occurred otherwise
@@ -604,19 +638,7 @@ public class PortfolioService extends Application implements HealthCheck {
 			queue = (Queue) context.lookup(NOTIFICATION_Q);
 
 			logger.info("JMS Initialization completed successfully!"); //exception would have occurred otherwise
-
-			if (watsonId != null) {
-				logger.info("Watson initialization completed successfully!");
-			} else {
-				logger.warning("WATSON_ID config property is null");
-			}
-
-			if (odmId != null) {
-				logger.info("Initialization complete");
-			} else {
-				logger.warning("ODM_ID config property is null");
-			}
-			initialized = true;
+			staticInitialized = true;
 		} catch (NamingException ne) {
 			logger.warning("JNDI lookup failed.  Initialization did NOT complete.  Expect severe failures!");
 			logException(ne);
@@ -626,12 +648,27 @@ public class PortfolioService extends Application implements HealthCheck {
 			logException(re);
 			throw re;
 		}
-	}
+
+		if (portfolioService!=null) {//should only be null during a readiness check
+			if (portfolioService.watsonId != null) {
+				logger.info("Watson initialization completed successfully!");
+			} else {
+				logger.warning("WATSON_ID config property is null");
+			}
+
+			if (portfolioService.odmId != null) {
+				logger.info("Initialization complete");
+			} else {
+				logger.warning("ODM_ID config property is null");
+			}
+			initialized = true;
+		}
+}
 
 	@Traced
 	private void invokeJDBC(String command) throws SQLException {
 		try {
-			initialize();
+			initialize(this);
 		} catch (NamingException ne) {
 			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
 		}
@@ -658,7 +695,7 @@ public class PortfolioService extends Application implements HealthCheck {
 		ResultSet results = null;
 
 		try {
-			initialize();
+			initialize(this);
 		} catch (NamingException ne) {
 			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
 		}
@@ -698,7 +735,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	 */
 	@Traced
 	private void invokeJMS(Object json) throws JMSException, NamingException {
-		if (!initialized) initialize(); //gets our JMS managed resources (Q and QCF)
+		if (!initialized) initialize(this); //gets our JMS managed resources (Q and QCF)
 
 		logger.info("Preparing to send a JMS message");
 
