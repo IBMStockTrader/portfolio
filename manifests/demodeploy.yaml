@@ -171,26 +171,26 @@ spec:
           - containerPort: 9080
           - containerPort: 9443
         imagePullPolicy: Always
-        readinessProbe:
-          httpGet:
-            path: /portfolio/health/readiness
-            port: 9080
-            httpHeaders:
-              - name: ProbeType
-                value: readiness
-          initialDelaySeconds: 90
-          periodSeconds: 10
-          failureThreshold: 5
-        livenessProbe:
-          httpGet:
-            path: /portfolio/health/liveness
-            port: 9080
-            httpHeaders:
-              - name: ProbeType
-                value: liveness
-          initialDelaySeconds: 120
-          periodSeconds: 10
-          failureThreshold: 5
+#        readinessProbe:
+#          httpGet:
+#            path: /portfolio/health/readiness
+#            port: 9080
+#            httpHeaders:
+#              - name: ProbeType
+#                value: readiness
+#          initialDelaySeconds: 90
+#          periodSeconds: 10
+#          failureThreshold: 5
+#        livenessProbe:
+#          httpGet:
+#            path: /portfolio/health/liveness
+#            port: 9080
+#            httpHeaders:
+#              - name: ProbeType
+#                value: liveness
+#          initialDelaySeconds: 120
+#          periodSeconds: 10
+#          failureThreshold: 5
         resources:
           limits:
             cpu: 500m
