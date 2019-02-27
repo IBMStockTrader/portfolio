@@ -182,8 +182,11 @@ public class PortfolioService extends Application implements HealthCheck {
 
     public static boolean isReady() { //determines answer to readiness probe
 		if (!staticInitialized) try{
-			initialize(null);
-		} catch (Throwable t) { logException(t); }
+			staticInitialize();
+		} catch (Throwable t) {
+			logException(t);
+		}
+
 		return (datasource!=null); //the only hard prereq for Portfolio is that JDBC is configured properly
 	}
 
@@ -526,7 +529,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
 		try {
-			initialize(this);
+			initialize();
 		} catch (NamingException ne) {
 			logger.warning("Error occurred during initialization");
 		}
@@ -622,8 +625,7 @@ public class PortfolioService extends Application implements HealthCheck {
 		return loyalty;
 	}
 
-	@Traced
-	private static void initialize(PortfolioService portfolioService) throws NamingException {
+	private static void staticInitialize() throws NamingException {
 		if (!staticInitialized) try {
 			logger.info("Obtaining JDBC Datasource");
 
@@ -648,27 +650,30 @@ public class PortfolioService extends Application implements HealthCheck {
 			logException(re);
 			throw re;
 		}
+	}
 
-		if (portfolioService!=null) {//should only be null during a readiness check
-			if (portfolioService.watsonId != null) {
-				logger.info("Watson initialization completed successfully!");
-			} else {
-				logger.warning("WATSON_ID config property is null");
-			}
+	@Traced
+	private void initialize() throws NamingException {
+		if (!staticInitialized) staticInitialize();
 
-			if (portfolioService.odmId != null) {
-				logger.info("Initialization complete");
-			} else {
-				logger.warning("ODM_ID config property is null");
-			}
-			initialized = true;
+		if (watsonId != null) {
+			logger.info("Watson initialization completed successfully!");
+		} else {
+			logger.warning("WATSON_ID config property is null");
 		}
-}
+
+		if (odmId != null) {
+			logger.info("Initialization complete");
+		} else {
+			logger.warning("ODM_ID config property is null");
+		}
+		initialized = true;
+	}
 
 	@Traced
 	private void invokeJDBC(String command) throws SQLException {
 		try {
-			initialize(this);
+			initialize();
 		} catch (NamingException ne) {
 			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
 		}
@@ -695,7 +700,7 @@ public class PortfolioService extends Application implements HealthCheck {
 		ResultSet results = null;
 
 		try {
-			initialize(this);
+			initialize();
 		} catch (NamingException ne) {
 			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
 		}
@@ -735,7 +740,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	 */
 	@Traced
 	private void invokeJMS(Object json) throws JMSException, NamingException {
-		if (!initialized) initialize(this); //gets our JMS managed resources (Q and QCF)
+		if (!initialized) initialize(); //gets our JMS managed resources (Q and QCF)
 
 		logger.info("Preparing to send a JMS message");
 
@@ -761,7 +766,7 @@ public class PortfolioService extends Application implements HealthCheck {
 
 	/** Send a message to IBM Event Streams via the Kafka APIs */
 	private void invokeKafka(Portfolio portfolio, String symbol, int shares, double commission) {
-		if (kafkaAddress == null || kafkaAddress.isEmpty()) {
+		if ((kafkaAddress == null) || kafkaAddress.isEmpty()) {
 			logger.info("IBM Event Streams not configured, so not sending Kafka message about this stock trade");
 			return; //only do the following if Kafka is configured
 		}
