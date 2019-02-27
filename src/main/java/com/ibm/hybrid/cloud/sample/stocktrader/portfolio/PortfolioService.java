@@ -1,5 +1,5 @@
 /*
-       Copyright 2017 IBM Corp All Rights Reserved
+       Copyright 2017-2019 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import javax.sql.DataSource;
 
 //CDI 1.2
 import javax.inject.Inject;
-import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.RequestScoped;
 
 //mpConfig 1.2
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -116,7 +116,7 @@ import javax.ws.rs.WebApplicationException;
 @Path("/")
 @Health
 @LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
-@ApplicationScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
+@RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
