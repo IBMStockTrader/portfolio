@@ -153,6 +153,8 @@ public class PortfolioService extends Application implements HealthCheck {
 
 	private static EventStreamsProducer kafkaProducer = null;
 
+	private @Inject HttpServletRequest request;
+
     private @Inject @RestClient StockQuoteClient stockQuoteClient;
     private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
 	private @Inject @RestClient ODMClient odmClient;
@@ -184,10 +186,11 @@ public class PortfolioService extends Application implements HealthCheck {
 	//mpHealth liveness check
 	@Override
 	public HealthCheckResponse call() {
+		logger.info(request==null ? "HttpServletRequest injection failed" :  "HttpServletRequest injection successful");
 		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio").withData("consecutiveErrors", consecutiveErrors);
 		if (isHealthy()) {
 			builder = builder.up();
-			logger.info("Returning healthy!");
+			logger.fine("Returning healthy!");
 		} else {
 			builder = builder.down();
 			logger.info("Returning NOT healthy!");
