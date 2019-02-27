@@ -178,7 +178,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	}
 
 	public static boolean isHealthy() {
-		return consecutiveErrors>MAX_ERRORS;
+		return consecutiveErrors<MAX_ERRORS;
 	}
 
 	//mpHealth liveness check
@@ -270,6 +270,7 @@ public class PortfolioService extends Application implements HealthCheck {
 				throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);
 			}
 			logger.info("Portfolio created successfully");
+			consecutiveErrors = 0;
 		}
 
 		return portfolio;
