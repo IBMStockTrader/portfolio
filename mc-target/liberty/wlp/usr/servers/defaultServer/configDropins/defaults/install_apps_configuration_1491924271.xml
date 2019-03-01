@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<server>
-    <webApplication id="portfolio" location="portfolio-1.0-SNAPSHOT.war" name="portfolio"/>
-</server>
