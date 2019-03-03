@@ -27,13 +27,13 @@ import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Path;
-import javax.ws.rs.ServiceUnavailableException; //503
+import javax.ws.rs.ServiceUnavailableException; //http 503 code
 
 
 @ApplicationPath("health")
 /** Implement the Kubernetes readiness and liveness probes */
-public class HealthProbes extends Application {
-	private static Logger logger = Logger.getLogger(HealthProbes.class.getName());
+public class ManualHealthProbes extends Application {
+	private static Logger logger = Logger.getLogger(ManualHealthProbes.class.getName());
 
 	@GET
 	@Path("/readiness")
@@ -44,8 +44,8 @@ public class HealthProbes extends Application {
             logger.fine("Readiness probe succeeded");
             response = new HealthResponse("readiness", "ready");
         } else {
-            logger.info("Readiness probe failed");
-            throw new ServiceUnavailableException();
+            logger.warning("Readiness probe failed");
+            throw new ServiceUnavailableException(); //503
         }
         return response;
     }
@@ -59,8 +59,8 @@ public class HealthProbes extends Application {
             logger.fine("Liveness probe succeeded");
             response = new HealthResponse("liveness", "healthy");
         } else {
-            logger.info("Liveness probe failed");
-            throw new ServiceUnavailableException();
+            logger.warning("Liveness probe failed");
+            throw new ServiceUnavailableException(); //503
         }
         return response;
     }
