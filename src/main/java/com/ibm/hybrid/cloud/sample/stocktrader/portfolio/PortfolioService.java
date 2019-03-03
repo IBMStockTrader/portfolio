@@ -47,11 +47,7 @@ import javax.enterprise.context.RequestScoped;
 //mpConfig 1.2
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-//mpHealth 1.0
-import org.eclipse.microprofile.health.Health;
-import org.eclipse.microprofile.health.HealthCheck;
-import org.eclipse.microprofile.health.HealthCheckResponse;
-import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
+//mpHealth stuff moved to MPHealthProbes.java
 
 //mpJWT 1.1
 import org.eclipse.microprofile.auth.LoginConfig;
@@ -114,21 +110,18 @@ import javax.ws.rs.WebApplicationException;
 
 @ApplicationPath("/")
 @Path("/")
-@Health
 @LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
 @RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
-public class PortfolioService extends Application implements HealthCheck {
+public class PortfolioService extends Application {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
 
 	private static final double ERROR            = -1.0;
 	private static final int    CONFLICT         = 409;         //odd that JAX-RS has no ConflictException
 	private static final short  MAX_ERRORS       = 3;           //health check will fail if this threshold is met
 	private static final String FAIL             = "FAIL";      //trying to create a portfolio with this name will always throw a 400
-	private static final String READINESS        = "readiness"; //header value from yaml for readiness probe
-	private static final String LIVENESS         = "liveness";  //header value from yaml for liveness probe
 
 	private static final String NOTIFICATION_Q   = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF = "jms/Portfolio/NotificationQueueConnectionFactory";
@@ -142,7 +135,7 @@ public class PortfolioService extends Application implements HealthCheck {
 
 	private static boolean initialized = false;
 	private static boolean staticInitialized = false;
-	private static short consecutiveErrors = 0; //used in health check
+	static short consecutiveErrors = 0; //used in health check
 
 	private static Queue queue = null;
 	private static QueueConnectionFactory queueCF = null;
@@ -153,8 +146,6 @@ public class PortfolioService extends Application implements HealthCheck {
 	private static SimpleDateFormat timestampFormatter = null;
 
 	private static EventStreamsProducer kafkaProducer = null;
-
-	private @Inject HttpServletRequest request;
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 	private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
@@ -181,7 +172,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	}
 
 	public static boolean isReady() { //determines answer to readiness probe
-		if (!staticInitialized) try{
+		if (!staticInitialized) try {
 			staticInitialize();
 		} catch (Throwable t) {
 			logException(t);
@@ -192,51 +183,6 @@ public class PortfolioService extends Application implements HealthCheck {
 
 	public static boolean isHealthy() { //determines answer to livenesss probe
 		return consecutiveErrors<MAX_ERRORS;
-	}
-
-	//mpHealth probe
-	@Override
-	public HealthCheckResponse call() {
-		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
-
-		String probeType = null;
-		if (request!=null) { //determine if this is a readiness or liveness probe
-			try {
-			probeType = request.getHeader("ProbeType");
-			} catch (Throwable t) {
-				logException(t);
-			}
-		} else {
-			logger.warning("Failure injecting HttpServletRequest");
-		}
-
-		if (probeType!=null) {
-			if (probeType.equals(READINESS)) { //this is a readiness probe
-				if (isHealthy()) {
-					builder = builder.up();
-					logger.fine("Returning ready!");
-				} else {
-					builder = builder.down();
-					logger.info("Returning NOT ready!");
-				}
-			} else if (probeType.equals(LIVENESS)) { //this is a liveness probe
-				builder = builder.withData("consecutiveErrors", consecutiveErrors);
-				if (isHealthy()) {
-					builder = builder.up();
-					logger.fine("Returning healthy!");
-				} else {
-					builder = builder.down();
-					logger.info("Returning NOT healthy!");
-				}
-			} else {
-				logger.warning("Unable to determine Kubernetes probe type: "+probeType);
-				builder = builder.down();
-			}
-		} else {
-			logger.warning("ProbeType http header not set - telling Kubernetes to kill this pod");
-			builder = builder.down();
-		}
-		return builder.build();
 	}
 
 	@GET
@@ -325,7 +271,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio getPortfolio(@PathParam("owner") String owner) throws IOException, SQLException {
+	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		Portfolio newPortfolio = null;
 
 		Portfolio oldPortfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
@@ -409,7 +355,7 @@ public class PortfolioService extends Application implements HealthCheck {
 
 			portfolio.setTotal(overallTotal);
 
-			String loyalty = processLoyaltyLevel(owner, overallTotal, oldLoyalty);
+			String loyalty = processLoyaltyLevel(owner, overallTotal, oldLoyalty, request);
 			portfolio.setLoyalty(loyalty);
 
 			int free = oldPortfolio.getFree();
@@ -465,8 +411,8 @@ public class PortfolioService extends Application implements HealthCheck {
 	@GET
 	@Path("/{owner}/returns")
 	@Produces(MediaType.TEXT_PLAIN)
-	public String getPortfolioReturns(@PathParam("owner") String owner) throws IOException, SQLException {
-		Double portfolioValue = getPortfolio(owner).getTotal();
+	public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
+		Double portfolioValue = getPortfolio(owner, request).getTotal();
 		return tradeHistoryClient.getReturns(owner, portfolioValue);
 	}
 
@@ -475,7 +421,7 @@ public class PortfolioService extends Application implements HealthCheck {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares) throws IOException, SQLException {
+	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner); //throws a 404 if not found
 
 		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
@@ -504,7 +450,7 @@ public class PortfolioService extends Application implements HealthCheck {
 
 		//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
 		logger.info("Refreshing portfolio for "+owner);
-		Portfolio portfolio = getPortfolio(owner);
+		Portfolio portfolio = getPortfolio(owner, request);
 
 		invokeKafka(portfolio, symbol, shares, commission);
 
@@ -583,7 +529,7 @@ public class PortfolioService extends Application implements HealthCheck {
 		return feedback;
 	}
 
-	private String processLoyaltyLevel(String owner, double overallTotal, String oldLoyalty) {
+	private String processLoyaltyLevel(String owner, double overallTotal, String oldLoyalty, HttpServletRequest request) {
 		String loyalty = null;
 		ODMLoyaltyRule input = new ODMLoyaltyRule(overallTotal);
 		try {
