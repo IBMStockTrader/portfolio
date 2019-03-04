@@ -41,7 +41,6 @@ import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
 
 @Health
 @RequestScoped
-@ActivateRequestContext
 /** Use mpHealth for both readiness and liveness probes. */
 public class MPHealthProbes implements HealthCheck {
 	private static Logger logger = Logger.getLogger(MPHealthProbes.class.getName());
@@ -54,6 +53,7 @@ public class MPHealthProbes implements HealthCheck {
 
 	//mpHealth probe
 	@Override
+	@ActivateRequestContext
 	public HealthCheckResponse call() {
 		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
 
