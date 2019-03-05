@@ -25,13 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 //CDI 2.0
-import javax.inject.Inject;
 import javax.enterprise.context.ApplicationScoped;
-//import javax.enterprise.context.control.ActivateRequestContext;
-import javax.enterprise.context.control.RequestContextController;
-
-//Servlet 4.0
-import javax.servlet.http.HttpServletRequest;
 
 //mpHealth 1.0
 import org.eclipse.microprofile.health.Health;
@@ -42,72 +36,39 @@ import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
 
 @Health
 @ApplicationScoped
-/** Use mpHealth for both readiness and liveness probes. */
+/** Use mpHealth for liveness probe.  Note that mpHealth-1.0 doesn't support a readiness probe;
+ *  supposedly that is coming in mpHealth-2.0 (whose spec is still evolving).
+*/
 public class MPHealthProbes implements HealthCheck {
 	private static Logger logger = Logger.getLogger(MPHealthProbes.class.getName());
 
-	private static final String READINESS        = "readiness"; //header value from yaml for readiness probe
-	private static final String LIVENESS         = "liveness";  //header value from yaml for liveness probe
-
-	private @Inject RequestContextController requestContextController;
-	private @Inject HttpServletRequest request;
 
 	//mpHealth probe
 	@Override
-//	@ActivateRequestContext
 	public HealthCheckResponse call() {
-		logger.info("Entering mpHealth call() - activating RequestContextController");
-		requestContextController.activate();
+		HealthCheckResponse response = null;
+		try {
+			HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
 
-		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
-
-		String probeType = null;
-		if (request!=null) { //determine if this is a readiness or liveness probe
-			try {
-				logger.info("getting ProbeType header");
-				probeType = request.getHeader("ProbeType");
-				logger.info("got ProbeType header: "+probeType);
-			} catch (Throwable t) {
-				logger.info("failed getting ProbeType header");
-				logException(t);
-			}
-		} else {
-			logger.warning("Failure injecting HttpServletRequest");
-		}
-
-		if (probeType!=null) {
-			if (probeType.equals(READINESS)) { //this is a readiness probe
-				if (PortfolioService.isReady()) {
-					builder = builder.up();
-					logger.fine("Returning ready!");
-				} else {
-					builder = builder.down();
-					logger.warning("Returning NOT ready!");
-				}
-			} else if (probeType.equals(LIVENESS)) { //this is a liveness probe
-				builder = builder.withData("consecutiveErrors", PortfolioService.consecutiveErrors);
-				if (PortfolioService.isHealthy()) {
-					builder = builder.up();
-					logger.fine("Returning healthy!");
-				} else {
-					builder = builder.down();
-					logger.warning("Returning NOT healthy!");
-				}
+			if (PortfolioService.isHealthy()) {
+				builder = builder.up();
+				logger.fine("Returning healthy!");
 			} else {
-				logger.warning("Unable to determine Kubernetes probe type: "+probeType);
 				builder = builder.down();
+				logger.warning("Returning NOT healthy!");
 			}
-		} else {
-			logger.warning("ProbeType http header not set - defaulting to healthy");
-			builder = builder.up();
+	
+			builder = builder.withData("consecutiveErrors", PortfolioService.consecutiveErrors);
+
+			response = builder.build(); 
+		} catch (Throwable t) {
+			logger.warning("Exception occurred during health check: "+t.getMessage());
+			logException(t);
+			throw t;
 		}
-
-		logger.info("Exiting mpHealth call() - deactivating RequestContextController");
-		requestContextController.deactivate();
-
-		return builder.build();
+	
+		return response;
 	}
-
 
 	private static void logException(Throwable t) {
 		logger.warning(t.getClass().getName()+": "+t.getMessage());
