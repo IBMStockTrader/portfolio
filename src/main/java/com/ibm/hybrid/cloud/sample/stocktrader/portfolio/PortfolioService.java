@@ -406,15 +406,17 @@ public class PortfolioService extends Application {
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
 		return portfolio;
-	}
-
-	@GET
-	@Path("/{owner}/returns")
-	@Produces(MediaType.TEXT_PLAIN)
-	public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-		Double portfolioValue = getPortfolio(owner, request).getTotal();
-		return tradeHistoryClient.getReturns(owner, portfolioValue);
-	}
+    }
+    
+    @GET
+    @Path("/{owner}/returns")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
+        Double portfolioValue = getPortfolio(owner, request).getTotal();
+        
+        String jwt = request.getHeader("Authorization");
+        return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
+    }
 
 	@PUT
 	@Path("/{owner}")

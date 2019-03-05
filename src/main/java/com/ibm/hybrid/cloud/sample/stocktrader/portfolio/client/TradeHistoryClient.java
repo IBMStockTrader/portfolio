@@ -16,10 +16,10 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
-
 import javax.enterprise.context.Dependent;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
@@ -37,5 +37,5 @@ public interface TradeHistoryClient {
     @GET
     @Path("/returns/{owner}")
     @Produces(MediaType.TEXT_PLAIN)
-    public String getReturns(@PathParam("owner") String ownerName, @QueryParam("currentValue") Double portfolioValue);
+    public String getReturns(@HeaderParam("Authorization") String jwt, @PathParam("owner") String ownerName, @QueryParam("currentValue") Double portfolioValue);
 }
