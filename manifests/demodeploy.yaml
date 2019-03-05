@@ -17,13 +17,17 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: portfolio
+  labels:
+    solution: stock-trader
+  annotations: { 
+    prism.subkind: Liberty
+  }
 spec:
   replicas: 1
   template:
     metadata:
       labels:
         app: portfolio
-        solution: stock-trader
     spec:
       containers:
       - name: portfolio
@@ -211,6 +215,8 @@ apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
   name: portfolio
+  labels:
+    solution: stock-trader
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -227,6 +233,7 @@ metadata:
   name: portfolio-service
   labels:
     app: portfolio
+    solution: stock-trader
 spec:
   type: NodePort
   ports:
@@ -253,6 +260,8 @@ metadata:
     ingress.kubernetes.io/secure-backends: "true"
     ingress.kubernetes.io/app-root: "/portfolio"
   name: portfolio-ingress
+  labels:
+    solution: stock-trader
 spec:
   rules:
   - host:
