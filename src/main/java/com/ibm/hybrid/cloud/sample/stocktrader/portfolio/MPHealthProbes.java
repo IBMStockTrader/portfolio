@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 //CDI 2.0
 import javax.inject.Inject;
 import javax.enterprise.context.RequestScoped;
-import javax.enterprise.context.control.ActivateRequestContext;
+import javax.enterprise.context.control.RequestContextController;
 
 //Servlet 4.0
 import javax.servlet.http.HttpServletRequest;
@@ -48,20 +48,25 @@ public class MPHealthProbes implements HealthCheck {
 	private static final String READINESS        = "readiness"; //header value from yaml for readiness probe
 	private static final String LIVENESS         = "liveness";  //header value from yaml for liveness probe
 
+	private @Inject RequestContextController requestContextController;
 	private @Inject HttpServletRequest request;
-
 
 	//mpHealth probe
 	@Override
-	@ActivateRequestContext
 	public HealthCheckResponse call() {
+		logger.info("Entering mpHealth call() - activating RequestContextController");
+		requestContextController.activate();
+
 		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
 
 		String probeType = null;
 		if (request!=null) { //determine if this is a readiness or liveness probe
 			try {
-			probeType = request.getHeader("ProbeType");
+				logger.info("getting ProbeType header");
+				probeType = request.getHeader("ProbeType");
+				logger.info("got ProbeType header: "+probeType);
 			} catch (Throwable t) {
+				logger.info("failed getting ProbeType header");
 				logException(t);
 			}
 		} else {
@@ -91,10 +96,16 @@ public class MPHealthProbes implements HealthCheck {
 				builder = builder.down();
 			}
 		} else {
-			logger.warning("ProbeType http header not set - telling Kubernetes to kill this pod");
-			builder = builder.down();
+			logger.warning("ProbeType http header not set - defaulting to healthy");
+			builder = builder.up();
 		}
-		return builder.build();
+
+		logger.info("Exiting mpHealth call() - deactivating RequestContextController");
+		requestContextController.deactivate();
+
+		HealthCheckResponse response = builder.build();
+
+		return response;
 	}
 
 
