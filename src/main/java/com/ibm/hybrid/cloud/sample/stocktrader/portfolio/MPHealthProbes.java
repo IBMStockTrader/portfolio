@@ -26,8 +26,9 @@ import java.util.logging.Logger;
 
 //CDI 2.0
 import javax.inject.Inject;
-import javax.enterprise.context.RequestScoped;
-import javax.enterprise.context.control.RequestContextController;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.control.ActivateRequestContext;
+//import javax.enterprise.context.control.RequestContextController;
 
 //Servlet 4.0
 import javax.servlet.http.HttpServletRequest;
@@ -40,7 +41,7 @@ import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
 
 
 @Health
-@RequestScoped
+@ApplicationScoped
 /** Use mpHealth for both readiness and liveness probes. */
 public class MPHealthProbes implements HealthCheck {
 	private static Logger logger = Logger.getLogger(MPHealthProbes.class.getName());
@@ -48,14 +49,15 @@ public class MPHealthProbes implements HealthCheck {
 	private static final String READINESS        = "readiness"; //header value from yaml for readiness probe
 	private static final String LIVENESS         = "liveness";  //header value from yaml for liveness probe
 
-	private @Inject RequestContextController requestContextController;
+//	private @Inject RequestContextController requestContextController;
 	private @Inject HttpServletRequest request;
 
 	//mpHealth probe
 	@Override
+	@ActivateRequestContext
 	public HealthCheckResponse call() {
 		logger.info("Entering mpHealth call() - activating RequestContextController");
-		requestContextController.activate();
+//		requestContextController.activate();
 
 		HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
 
@@ -101,11 +103,9 @@ public class MPHealthProbes implements HealthCheck {
 		}
 
 		logger.info("Exiting mpHealth call() - deactivating RequestContextController");
-		requestContextController.deactivate();
+//		requestContextController.deactivate();
 
-		HealthCheckResponse response = builder.build();
-
-		return response;
+		return builder.build();
 	}
 
 
