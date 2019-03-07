@@ -17,13 +17,17 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: portfolio
+  labels:
+    solution: stock-trader
+  annotations: { 
+    prism.subkind: Liberty
+  }
 spec:
   replicas: 1
   template:
     metadata:
       labels:
         app: portfolio
-        solution: stock-trader
     spec:
       containers:
       - name: portfolio
@@ -173,32 +177,54 @@ spec:
         imagePullPolicy: Always
         readinessProbe:
           httpGet:
+#            path: /portfolio/health/readiness
             path: /health
             port: 9080
-            httpHeaders:
-              - name: ProbeType
-                value: readiness
-          initialDelaySeconds: 30
-          periodSeconds: 5
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
         livenessProbe:
           httpGet:
+#            path: /portfolio/health/liveness
             path: /health
             port: 9080
-            httpHeaders:
-              - name: ProbeType
-                value: liveness
-          initialDelaySeconds: 60
-          periodSeconds: 5
-
+          initialDelaySeconds: 90
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 5 # Allow a little time to exec into the pod to grab FFDCs before it's killed
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
       #  Uncomment the following lines to get the keystore from the secret
-      #  volumeMounts:
-      #  - mountPath: /keystores
-      #    name: kafka-keystore-volume
-      #    readOnly: true
-      #volumes:
-      #- name: kafka-keystore-volume
-      #  secret:
-      #    secretName: kafka-keystore
+        volumeMounts:
+        - mountPath: /keystores
+          name: kafka-keystore-volume
+          readOnly: true
+      volumes:
+      - name: kafka-keystore-volume
+        secret:
+          secretName: kafka-keystore
+---
+#Deploy the autoscaler
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: portfolio
+  labels:
+    solution: stock-trader
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: portfolio
+  maxReplicas: 10
+  minReplicas: 2
+  targetCPUUtilizationPercentage: 50
 ---
 #Deploy the service
 apiVersion: v1
@@ -207,6 +233,7 @@ metadata:
   name: portfolio-service
   labels:
     app: portfolio
+    solution: stock-trader
 spec:
   type: NodePort
   ports:
@@ -233,6 +260,8 @@ metadata:
     ingress.kubernetes.io/secure-backends: "true"
     ingress.kubernetes.io/app-root: "/portfolio"
   name: portfolio-ingress
+  labels:
+    solution: stock-trader
 spec:
   rules:
   - host:
@@ -242,4 +271,3 @@ spec:
         backend:
           serviceName: portfolio-service
           servicePort: 9443
-
