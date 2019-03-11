@@ -223,7 +223,7 @@ spec:
     kind: Deployment
     name: portfolio
   maxReplicas: 10
-  minReplicas: 2
+  minReplicas: 1
   targetCPUUtilizationPercentage: 50
 ---
 #Deploy the service
