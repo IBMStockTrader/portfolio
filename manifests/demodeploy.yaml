@@ -23,7 +23,7 @@ metadata:
     prism.subkind: Liberty
   }
 spec:
-  replicas: 1
+  replicas: 2
   template:
     metadata:
       labels:
@@ -210,21 +210,21 @@ spec:
         secret:
           secretName: kafka-keystore
 ---
-#Deploy the autoscaler
-#apiVersion: autoscaling/v1
-#kind: HorizontalPodAutoscaler
-#metadata:
-#  name: portfolio
-#  labels:
-#    solution: stock-trader
-#spec:
-#  scaleTargetRef:
-#    apiVersion: apps/v1
-#    kind: Deployment
-#    name: portfolio
-#  maxReplicas: 10
-#  minReplicas: 2
-#  targetCPUUtilizationPercentage: 50
+Deploy the autoscaler
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: portfolio
+  labels:
+    solution: stock-trader
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: portfolio
+  maxReplicas: 10
+  minReplicas: 2
+  targetCPUUtilizationPercentage: 50
 ---
 #Deploy the service
 apiVersion: v1
