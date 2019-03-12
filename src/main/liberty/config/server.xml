@@ -35,7 +35,9 @@
 
     <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" />
 
+<!--
     <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default" ignoreApplicationAuthMethod="false"/>
+-->
 
     <mpMetrics authentication="false"/>
 
