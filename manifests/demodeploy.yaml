@@ -23,7 +23,7 @@ metadata:
     prism.subkind: Liberty
   }
 spec:
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
@@ -195,7 +195,7 @@ spec:
           failureThreshold: 5 # Allow a little time to exec into the pod to grab FFDCs before it's killed
         resources:
           limits:
-            cpu: 500m
+            cpu: 1000m
             memory: 500Mi
           requests:
             cpu: 100m
@@ -223,7 +223,7 @@ spec:
     kind: Deployment
     name: portfolio
   maxReplicas: 10
-  minReplicas: 2
+  minReplicas: 1
   targetCPUUtilizationPercentage: 50
 ---
 #Deploy the service
