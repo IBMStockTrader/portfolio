@@ -1,4 +1,4 @@
-#       Copyright 2017 IBM Corp All Rights Reserved
+#       Copyright 2017-2019 IBM Corp All Rights Reserved
 
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ kind: Deployment
 metadata:
   name: portfolio
   labels:
-    solution: stock-trader
+    app: stock-trader
   annotations: { 
     prism.subkind: Liberty
   }
@@ -171,6 +171,30 @@ spec:
               secretKeyRef:
                 name: jwt
                 key: issuer
+          - name: STOCK_QUOTE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: urls
+                key: stock-quote
+                optional: true
+          - name: TRADE_HISTORY_URL
+            valueFrom:
+              configMapKeyRef:
+                name: urls
+                key: trade-history
+                optional: true
+          - name: API_CONNECT_URL
+            valueFrom:
+              configMapKeyRef:
+                name: urls
+                key: api-connect
+                optional: true
+          - name: IEX_URL
+            valueFrom:
+              configMapKeyRef:
+                name: urls
+                key: iex
+                optional: true
         ports:
           - containerPort: 9080
           - containerPort: 9443
