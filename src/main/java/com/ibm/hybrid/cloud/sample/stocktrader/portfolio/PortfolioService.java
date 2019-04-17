@@ -155,19 +155,46 @@ public class PortfolioService extends Application {
 	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
 	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
 	private @Inject @ConfigProperty(name = "WATSON_ID", defaultValue = "apikey") String watsonId;
-	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd;
+	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd; //if using an API Key, it goes here
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
 	// Override ODM Client URL if secret is configured to provide URL
 	static {
-		String mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
-		String odmURL = System.getenv("ODM_URL");
-		if ((odmURL != null) && !odmURL.isEmpty()) {
-			logger.info("Using ODM URL from secret: " + odmURL);
-			System.setProperty(mpUrlPropName, odmURL);
+		String mpUrlPropName = StockQuoteClient.class.getName() + "/mp-rest/url";
+		String urlFromEnv = System.getenv("STOCK_QUOTE_URL");
+		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
+			logger.info("Using Stock Quote URL from config map: " + urlFromEnv);
+			System.setProperty(mpUrlPropName, urlFromEnv);
+		} else {
+			logger.info("Stock Quote URL not found from env var from secret, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
+		}
+
+		mpUrlPropName = TradeHistoryClient.class.getName() + "/mp-rest/url";
+		urlFromEnv = System.getenv("TRADE_HISTORY_URL");
+		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
+			logger.info("Using Trade History URL from config map: " + urlFromEnv);
+			System.setProperty(mpUrlPropName, urlFromEnv);
+		} else {
+			logger.info("Trade History URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
+		}
+
+		mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
+		urlFromEnv = System.getenv("ODM_URL");
+		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
+			logger.info("Using ODM URL from config map: " + urlFromEnv);
+			System.setProperty(mpUrlPropName, urlFromEnv);
 		} else {
 			logger.info("ODM URL not found from env var from secret, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
+		}
+
+		mpUrlPropName = WatsonClient.class.getName() + "/mp-rest/url";
+		urlFromEnv = System.getenv("WATSON_URL");
+		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
+			logger.info("Using Watson URL from config map: " + urlFromEnv);
+			System.setProperty(mpUrlPropName, urlFromEnv);
+		} else {
+			logger.info("Watson URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 	}
 
