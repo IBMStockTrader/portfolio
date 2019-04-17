@@ -185,18 +185,6 @@ spec:
                 name: urls
                 key: trade-history
                 optional: true
-          - name: API_CONNECT_URL
-            valueFrom:
-              configMapKeyRef:
-                name: urls
-                key: api-connect
-                optional: true
-          - name: IEX_URL
-            valueFrom:
-              configMapKeyRef:
-                name: urls
-                key: iex
-                optional: true
         ports:
           - containerPort: 9080
           - containerPort: 9443
@@ -250,7 +238,7 @@ spec:
     name: portfolio
   maxReplicas: 10
   minReplicas: 2
-  targetCPUUtilizationPercentage: 50
+  targetCPUUtilizationPercentage: 60
 ---
 #Deploy the service
 apiVersion: v1
