@@ -28,6 +28,8 @@ spec:
     metadata:
       labels:
         app: portfolio
+      annotations:
+        prometheus.io/scrape: 'true'
     spec:
       containers:
       - name: portfolio
