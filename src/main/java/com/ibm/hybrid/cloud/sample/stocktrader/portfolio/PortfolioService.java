@@ -167,7 +167,7 @@ public class PortfolioService extends Application {
 			logger.info("Using Stock Quote URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
 		} else {
-			logger.info("Stock Quote URL not found from env var from secret, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
+			logger.info("Stock Quote URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = TradeHistoryClient.class.getName() + "/mp-rest/url";
@@ -185,7 +185,7 @@ public class PortfolioService extends Application {
 			logger.info("Using ODM URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
 		} else {
-			logger.info("ODM URL not found from env var from secret, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
+			logger.info("ODM URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = WatsonClient.class.getName() + "/mp-rest/url";
