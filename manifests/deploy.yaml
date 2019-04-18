@@ -228,7 +228,7 @@ spec:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: portfolio
+  name: portfolio-hpa
   labels:
     solution: stock-trader
 spec:
@@ -275,7 +275,7 @@ metadata:
     ingress.kubernetes.io/app-root: "/portfolio"
   name: portfolio-ingress
   labels:
-    solution: stock-trader
+    app: stock-trader
 spec:
   rules:
   - host:
