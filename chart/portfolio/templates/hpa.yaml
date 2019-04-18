@@ -21,6 +21,8 @@ apiVersion: autoscaling/v2alpha1
 kind: HorizontalPodAutoscaler
 metadata:
   name: "{{ .Chart.Name }}-hpa-policy"
+  labels:
+    app: "{{ .Release.Name }}-{{ .Chart.Name }}"
   namespace: 
 spec:
   scaleTargetRef:

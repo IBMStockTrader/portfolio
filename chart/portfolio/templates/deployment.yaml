@@ -17,6 +17,7 @@ kind: Deployment
 metadata:
   name: "{{  .Chart.Name }}-deployment"
   labels:
+    app: "{{ .Release.Name }}-{{ .Chart.Name }}"
     chart: '{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}'
 spec:
   replicas: {{ .Values.replicaCount }}

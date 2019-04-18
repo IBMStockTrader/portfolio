@@ -17,6 +17,8 @@ apiVersion: config.istio.io/v1alpha2
 kind: RouteRule
 metadata:
   name: "{{  .Chart.Name }}-default"
+  labels:
+    app: "{{ .Release.Name }}-{{ .Chart.Name }}"
 spec:
   destination:
     name: "{{  .Chart.Name }}-service"
