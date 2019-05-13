@@ -132,37 +132,37 @@ spec:
                 name: odm
                 key: pwd
                 optional: true
-          - name: KAFKA_TOPIC
-            valueFrom:
-              secretKeyRef:
-                name: kafka
-                key: topic
-                optional: true
-          - name: KAFKA_ADDRESS
-            valueFrom:
-              secretKeyRef:
-                name: kafka
-                key: address
-                optional: true
-          - name: KAFKA_USER
-            valueFrom:
-              secretKeyRef:
-                name: kafka
-                key: user
-                optional: true
-          - name: KAFKA_API_KEY
-            valueFrom:
-              secretKeyRef:
-                name: kafka
-                key: api-key
-                optional: true
-          # location of the keystore.  See below comments about volumeMount
-          - name: KAFKA_KEYSTORE
-            valueFrom:
-              secretKeyRef:
-                name: kafka
-                key: keystore
-                optional: true
+#          - name: KAFKA_TOPIC
+#            valueFrom:
+#              secretKeyRef:
+#                name: kafka
+#                key: topic
+#               optional: true
+#          - name: KAFKA_ADDRESS
+#           valueFrom:
+#              secretKeyRef:
+#               name: kafka
+#               key: address
+#               optional: true
+#          - name: KAFKA_USER
+#           valueFrom:
+#             secretKeyRef:
+#               name: kafka
+#               key: user
+#               optional: true
+#          - name: KAFKA_API_KEY
+#            valueFrom:
+#             secretKeyRef:
+#                name: kafka
+#                key: api-key
+#                optional: true
+#          # location of the keystore.  See below comments about volumeMount
+#          - name: KAFKA_KEYSTORE
+#            valueFrom:
+#              secretKeyRef:
+#                name: kafka
+#                key: keystore
+#                optional: true
           - name: JWT_AUDIENCE
             valueFrom:
               secretKeyRef:
@@ -179,12 +179,12 @@ spec:
                 name: urls
                 key: stock-quote
                 optional: true
-          - name: TRADE_HISTORY_URL
-            valueFrom:
-              configMapKeyRef:
-                name: urls
-                key: trade-history
-                optional: true
+#          - name: TRADE_HISTORY_URL
+#            valueFrom:
+#              configMapKeyRef:
+#               name: urls
+#               key: trade-history
+#               optional: true
         ports:
           - containerPort: 9080
           - containerPort: 9443
