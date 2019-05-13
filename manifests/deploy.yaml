@@ -215,14 +215,14 @@ spec:
             cpu: 100m
             memory: 128Mi
       #  Uncomment the following lines to get the keystore from the secret
-        volumeMounts:
-        - mountPath: /keystores
-          name: kafka-keystore-volume
-          readOnly: true
-      volumes:
-      - name: kafka-keystore-volume
-        secret:
-          secretName: kafka-keystore
+#        volumeMounts:
+#        - mountPath: /keystores
+#          name: kafka-keystore-volume
+#          readOnly: true
+#      volumes:
+#      - name: kafka-keystore-volume
+#        secret:
+#         secretName: kafka-keystore
 ---
 #Deploy the autoscaler
 apiVersion: autoscaling/v1
