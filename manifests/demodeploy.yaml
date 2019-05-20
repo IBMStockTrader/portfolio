@@ -175,18 +175,18 @@ spec:
           - containerPort: 9080
           - containerPort: 9443
         imagePullPolicy: Always
-#        readinessProbe:
-#          httpGet:
-#            path: /portfolio/health/readiness
-#            path: /health
-#            port: 9080
-#          initialDelaySeconds: 60
-#          periodSeconds: 10
-#          successThreshold: 1
-#          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /portfolio/health/readiness
+            path: /health
+            port: 9080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
         livenessProbe:
           httpGet:
-#            path: /portfolio/health/liveness
+            path: /portfolio/health/liveness
             path: /health
             port: 9080
           initialDelaySeconds: 90
@@ -200,7 +200,7 @@ spec:
           requests:
             cpu: 100m
             memory: 128Mi
-      #  Uncomment the following lines to get the keystore from the secret
+#        Uncomment the following lines to get the keystore from the secret
 #        volumeMounts:
 #        - mountPath: /keystores
 #          name: kafka-keystore-volume
@@ -210,7 +210,7 @@ spec:
 #        secret:
 #          secretName: kafka-keystore
 ---
-Deploy the autoscaler
+#Deploy the autoscaler
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
