@@ -23,10 +23,10 @@
         <feature>jndi-1.0</feature>
         <feature>appSecurity-2.0</feature>
         <feature>monitor-1.0</feature>
-        <feature>logstashCollector-1.0</feature>
+<!--    <feature>logstashCollector-1.0</feature> -->
     </featureManager>
 
-    <logging traceSpecification="*=info:com.ibm.hybrid.cloud.sample.stocktrader.portfolio.*=fine" consoleLogLevel="INFO"/>
+    <logging traceSpecification="*=info" consoleLogLevel="INFO" consoleSource="message,ffdc" consoleFormat="json" />
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
     
