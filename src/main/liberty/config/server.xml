@@ -44,6 +44,7 @@
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
 -->
 
+<!--
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
         <jdbcDriver>
@@ -52,14 +53,24 @@
             </library>
         </jdbcDriver>
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
-            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> 
+    </dataSource> 
+-->
+    
+    <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB">
+        <jdbcDriver libraryRef="DerbyLib" />
+        <properties.derby.embedded databaseName="/derby/lib/trader" createDatabase="create" /> 
     </dataSource>
+    <library id="DerbyLib">
+        <fileset dir="/derby/lib"/>
+    </library>
 
     <authData id="MQ-Credentials" user="${env.MQ_ID}" password="${env.MQ_PASSWORD}"></authData>
 
     <resourceAdapter id="mq" location="/config/wmq.jmsra.rar"/>
 
-    <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory" containerAuthDataRef="MQ-Credentials">
+ <!--   <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory" containerAuthDataRef="MQ-Credentials">
         <properties.mq 
             transportType="CLIENT"
             hostName="${env.MQ_HOST}" 
@@ -70,7 +81,7 @@
     <jmsQueue id="NotificationQ" jndiName="jms/Portfolio/NotificationQueue">
         <properties.mq baseQueueName="${env.MQ_QUEUE}" baseQueueManagerName="${env.MQ_QUEUE_MANAGER}"/>
     </jmsQueue>
-
+-->
 <!-- Use this to be a client to Liberty's built-in JMS provider (running in a messaging-engine pod) instead of MQ
     <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory">
         <properties.wasJms remoteServerAddress="messaging-engine-service:7276:BootstrapBasicMessaging"/>
@@ -109,11 +120,11 @@
         webAlwaysLogin="true" preserveFullyQualifiedReferrerUrl="true" trackLoggedOutSSOCookies="true" ssoCookieName="StockTraderSSO"
         useOnlyCustomCookieName="true" ssoUseDomainFromURL="true"/>
 
-    <webApplication id="Portfolio" name="Portfolio" location="Portfolio.war" contextRoot="/portfolio">
-        <application-bnd>
+    <webApplication id="Portfolio" name="Portfolio" location="portfolio-1.0-SNAPSHOT.war" contextRoot="/portfolio">
+        <!-- <application-bnd>
             <security-role id="StockTrader" name="StockTrader">
                 <special-subject type="ALL_AUTHENTICATED_USERS" id="IBMid"/>
             </security-role>
-        </application-bnd>
+        </application-bnd> -->
     </webApplication>
 </server>
