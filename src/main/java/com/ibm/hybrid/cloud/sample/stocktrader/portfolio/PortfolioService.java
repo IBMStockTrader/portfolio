@@ -227,26 +227,10 @@ public class PortfolioService extends Application {
 	@Transactional
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio[] getPortfolios() throws SQLException {
-		//ArrayList<Portfolio> portfolioList = new ArrayList<Portfolio>();
-		//int count = 0;
 
 		logger.fine("Running following SQL: SELECT * FROM Portfolio");
 		List<Portfolio> portfolioList = em.createNamedQuery("Portfolio.findAll", Portfolio.class).getResultList();
 		int count = portfolioList.size();
-
-		// logger.fine("Iterating over results");
-		// for(Portfolio portfolio : results) {
-		// 	portfolioList.add(portfolio);
-		// 	count++;
-		// }
-
-		//try {
-			//ResultSet results = invokeJDBCWithResults("SELECT * FROM Portfolio");
-			//releaseResults(results);
-		//} catch (SQLException sqle) {
-			//logException(sqle);
-			//throw sqle;
-		//}
 	
 		logger.info("Returning "+count+" portfolios");
 
@@ -296,14 +280,6 @@ public class PortfolioService extends Application {
 				throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);			
 			}
 
-			// try {
-			// 	em.persist(portfolio);
-			// 	em.flush();
-			// } catch (EntityExistsException dupKey) {
-			// 	logger.warning("Portfolio already exists for: "+owner);
-			// 	logException(dupKey);
-			// 	throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);
-			// }
 			logger.info("Portfolio created successfully");
 			consecutiveErrors = 0;
 		}
@@ -329,7 +305,6 @@ public class PortfolioService extends Application {
 			ArrayList<Stock> stocks = new ArrayList<Stock>();
 
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
-			//ResultSet results = invokeJDBCWithResults("SELECT * FROM Stock WHERE owner = '"+owner+"'");
 			List<Stock> results = em.createNamedQuery("Stock.findAll", Stock.class).setParameter("owner", owner).getResultList();
 
 			int count = 0;
@@ -363,6 +338,7 @@ public class PortfolioService extends Application {
 
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
 					logger.fine("Running following SQL: UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+					
 					//invokeJDBC("UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
 				} catch (Throwable t) {
@@ -424,17 +400,8 @@ public class PortfolioService extends Application {
 		return newPortfolio;
 	}
 
-	@GET
-    @Path("/close")
-    @Produces(MediaType.TEXT_PLAIN)
-    public void closeEm() {
-		em.close();
-    }
-
-
 	private Portfolio getPortfolioWithoutStocks(String owner) throws SQLException {
 		logger.fine("Running following SQL: SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
-		//ResultSet results = invokeJDBCWithResults("SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
 		Portfolio result = em.find(Portfolio.class, owner);
 
 		Portfolio portfolio = null;
@@ -448,14 +415,10 @@ public class PortfolioService extends Application {
 			int free = result.getFree();
 			String sentiment = result.getSentiment();
 
-			//releaseResults(results);
-
 			double nextCommission = getCommission(loyalty);
 
 			portfolio = new Portfolio(owner, total, loyalty, balance, commissions, free, sentiment, nextCommission);
 		} else {
-			//releaseResults(results);
-
 			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
 		}
 
