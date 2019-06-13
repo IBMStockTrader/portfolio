@@ -16,8 +16,23 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.NamedQuery;
+
+import javax.persistence.Column;
+import javax.persistence.ManyToOne;
+
+@Entity
+@Table
+@NamedQuery(name = "Stock.findAll", query = "SELECT s FROM Stock WHERE s.owner = :owner")
 /** JSON-B POJO class representing a Stock JSON object */
 public class Stock {
+
+    @Id
+    @Column(nullable = false, length = 8)
     private String symbol;
     private int shares;
     private double commission;
@@ -25,6 +40,9 @@ public class Stock {
     private double total;
     private String date;
 
+    @ManyToOne
+    @JoinColumn(name = "owner")
+    private Portfolio portfolio;
 
     public Stock() { //default constructor
     }
@@ -89,6 +107,14 @@ public class Stock {
 
     public void setDate(String newDate) {
         date = newDate;
+    }
+
+    public Portfolio getPortfolio() {
+        return portfolio;
+    }
+
+    public void setPortfolio(Portfolio newPortfolio) {
+        portfolio = newPortfolio;
     }
 
     public String toString() {

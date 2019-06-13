@@ -17,26 +17,39 @@
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
 import java.util.Iterator;
-import java.util.Set;
 
 //JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import javax.persistence.Id;
+import javax.persistence.Column;
+import javax.persistence.NamedQuery;
 
+@Entity
+@Table
+@NamedQuery(name = "Portfolio.findAll", query = "SELECT p FROM Portfolio p")
 /** JSON-B POJO class representing a Portfolio JSON object */
 public class Portfolio {
+
+    @Id
+    @Column(nullable = false, length = 32)
     private String owner;
     private double total;
+    @Column(length = 8)
     private String loyalty;
     private double balance;
     private double commissions;
     private int free;
     private String sentiment;
+    @Transient
     private double nextCommission;
+    @Transient
     private JsonObject stocks;
-
 
     public Portfolio() { //default constructor
     }
