@@ -111,8 +111,6 @@ import javax.ws.rs.WebApplicationException;
 //JPA
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PersistenceException;
-import javax.persistence.EntityExistsException;
 
 @ApplicationPath("/")
 @Path("/")
