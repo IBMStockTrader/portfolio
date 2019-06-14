@@ -287,6 +287,7 @@ public class PortfolioService extends Application {
 		return portfolio;
 	}
 
+	//TODO - convert to JPA
 	@GET
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -338,7 +339,7 @@ public class PortfolioService extends Application {
 
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
 					logger.fine("Running following SQL: UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-					
+				
 					//invokeJDBC("UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
 				} catch (Throwable t) {
@@ -436,6 +437,7 @@ public class PortfolioService extends Application {
         return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
     }
 
+	//TODO - convert to JPA
 	@PUT
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -477,6 +479,7 @@ public class PortfolioService extends Application {
 		return portfolio;
 	}
 
+	//TODO - convert to JPA
 	@DELETE
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -491,6 +494,7 @@ public class PortfolioService extends Application {
 		return portfolio; //maybe this method should return void instead?
 	}
 
+	//TODO - convert to JPA
 	@POST
 	@Path("/{owner}/feedback")
 	@Consumes(MediaType.APPLICATION_JSON)
