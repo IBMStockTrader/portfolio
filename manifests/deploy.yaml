@@ -19,9 +19,8 @@ metadata:
   name: portfolio
   labels:
     app: stock-trader
-  annotations: { 
+  annotations:
     prism.subkind: Liberty
-  }
 spec:
   replicas: 1
   template:
@@ -36,7 +35,7 @@ spec:
       - name: portfolio
 #       image: portfolio:latest # Microservice Builder
 #       image: mycluster.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
-#       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Container Service
+#       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Kubernetes Service
         image: ibmstocktrader/portfolio:latest # Docker Hub
         env:
           - name: JDBC_HOST
@@ -133,37 +132,37 @@ spec:
                 name: odm
                 key: pwd
                 optional: true
-#          - name: KAFKA_TOPIC
-#            valueFrom:
-#              secretKeyRef:
-#                name: kafka
-#                key: topic
-#               optional: true
-#          - name: KAFKA_ADDRESS
-#           valueFrom:
-#              secretKeyRef:
-#               name: kafka
-#               key: address
-#               optional: true
-#          - name: KAFKA_USER
-#           valueFrom:
-#             secretKeyRef:
-#               name: kafka
-#               key: user
-#               optional: true
-#          - name: KAFKA_API_KEY
-#            valueFrom:
-#             secretKeyRef:
-#                name: kafka
-#                key: api-key
-#                optional: true
-#          # location of the keystore.  See below comments about volumeMount
-#          - name: KAFKA_KEYSTORE
-#            valueFrom:
-#              secretKeyRef:
-#                name: kafka
-#                key: keystore
-#                optional: true
+          - name: KAFKA_TOPIC
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: topic
+               optional: true
+          - name: KAFKA_ADDRESS
+           valueFrom:
+              secretKeyRef:
+               name: kafka
+               key: address
+               optional: true
+          - name: KAFKA_USER
+           valueFrom:
+             secretKeyRef:
+               name: kafka
+               key: user
+               optional: true
+          - name: KAFKA_API_KEY
+            valueFrom:
+             secretKeyRef:
+                name: kafka
+                key: api-key
+                optional: true
+          # location of the keystore.  See below comments about volumeMount
+          - name: KAFKA_KEYSTORE
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: keystore
+                optional: true
           - name: JWT_AUDIENCE
             valueFrom:
               secretKeyRef:
@@ -180,12 +179,16 @@ spec:
                 name: urls
                 key: stock-quote
                 optional: true
-#          - name: TRADE_HISTORY_URL
-#            valueFrom:
-#              configMapKeyRef:
-#               name: urls
-#               key: trade-history
-#               optional: true
+          - name: TRADE_HISTORY_URL
+            valueFrom:
+              configMapKeyRef:
+               name: urls
+               key: trade-history
+               optional: true
+          - name: WLP_LOGGING_CONSOLE_FORMAT
+            value: json
+          - name: WLP_LOGGING_CONSOLE_SOURCE
+            value: message,ffdc
         ports:
           - containerPort: 9080
           - containerPort: 9443
@@ -196,7 +199,7 @@ spec:
             path: /health
             port: 9080
           initialDelaySeconds: 60
-          periodSeconds: 10
+          periodSeconds: 15
           successThreshold: 1
           failureThreshold: 3
         livenessProbe:
@@ -205,7 +208,7 @@ spec:
             path: /health
             port: 9080
           initialDelaySeconds: 90
-          periodSeconds: 10
+          periodSeconds: 15
           successThreshold: 1
           failureThreshold: 5 # Allow a little time to exec into the pod to grab FFDCs before it's killed
         resources:
