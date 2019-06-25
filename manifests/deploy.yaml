@@ -137,15 +137,15 @@ spec:
               secretKeyRef:
                 name: kafka
                 key: topic
-               optional: true
+                optional: true
           - name: KAFKA_ADDRESS
-           valueFrom:
+            valueFrom:
               secretKeyRef:
                name: kafka
                key: address
                optional: true
           - name: KAFKA_USER
-           valueFrom:
+            valueFrom:
              secretKeyRef:
                name: kafka
                key: user
