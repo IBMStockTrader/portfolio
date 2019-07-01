@@ -1,0 +1,3 @@
+*
+!target/*.war
+!src/main/liberty/config

@@ -36,7 +36,7 @@
 
     <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" />
 
-    <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default" ignoreApplicationAuthMethod="false"/>
+<!--     <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default" ignoreApplicationAuthMethod="false"/> -->
 
     <mpMetrics authentication="false"/>
 
@@ -44,16 +44,21 @@
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
 -->
 
-    <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
-    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
-        <jdbcDriver>
-            <library name="DB2" description="DB2 JDBC driver jar">
-                <file id="db2jcc4" name="/config/db2jcc4.jar"/>
-            </library>
-        </jdbcDriver>
-        <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
-            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" isolationLevel="TRANSACTION_READ_COMMITTED">
+        <connectionManager minPoolSize="5" maxPoolSize="50"/>
+        <jdbcDriver libraryRef="PostgreSQL"/>
+<!--         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" -->
+<!--             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+        <properties serverName="${JDBC_HOST}" portNumber="${JDBC_PORT}" databaseName="${JDBC_DB}"
+                    user="${JDBC_ID}" password="${JDBC_PASSWORD}"/>
     </dataSource>
+    <library id="DB2" description="DB2 JDBC driver jar">
+        <file name="/config/db2jcc4.jar"/>
+    </library>
+    <library id="PostgreSQL">
+        <file name="/config/jdbc/postgresql.jar"/>
+    </library>
+    
 
     <authData id="MQ-Credentials" user="${env.MQ_ID}" password="${env.MQ_PASSWORD}"></authData>
 

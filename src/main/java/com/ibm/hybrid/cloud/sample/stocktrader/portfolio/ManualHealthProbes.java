@@ -21,18 +21,16 @@ import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.HealthResponse;
 import java.util.logging.Logger;
 
 //JAX-RS 2.0 (JSR 339)
-import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Path;
 import javax.ws.rs.ServiceUnavailableException; //http 503 code
 
 
-@ApplicationPath("health")
+@Path("health")
 /** Implement the Kubernetes readiness and liveness probes */
-public class ManualHealthProbes extends Application {
+public class ManualHealthProbes {
 	private static Logger logger = Logger.getLogger(ManualHealthProbes.class.getName());
 
 	@GET
@@ -41,7 +39,7 @@ public class ManualHealthProbes extends Application {
     public HealthResponse readiness() {
         HealthResponse response = null;
         if (PortfolioService.isReady()) {
-            logger.fine("Readiness probe succeeded");
+            logger.info("Readiness probe succeeded");
             response = new HealthResponse("readiness", "ready");
         } else {
             logger.warning("Readiness probe failed");
