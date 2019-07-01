@@ -74,9 +74,6 @@ import javax.jms.QueueSession;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-//JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.JsonObject;
-
 //JNDI 1.0
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -160,8 +157,6 @@ public class PortfolioService {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using Stock Quote URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Stock Quote URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = TradeHistoryClient.class.getName() + "/mp-rest/url";
@@ -169,8 +164,6 @@ public class PortfolioService {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using Trade History URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Trade History URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
@@ -178,8 +171,6 @@ public class PortfolioService {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using ODM URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("ODM URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = WatsonClient.class.getName() + "/mp-rest/url";
@@ -187,8 +178,6 @@ public class PortfolioService {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using Watson URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Watson URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 	}
 
@@ -760,9 +749,9 @@ public class PortfolioService {
 	
 			double price = -1;
 			String owner = portfolio.getOwner();
-			JsonObject stock = portfolio.getStocks().getJsonObject(symbol);
+			Stock stock = portfolio.getStocks().get(symbol);
 			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
-				price = stock.getJsonNumber("price").doubleValue();
+			    price = stock.getPrice();
 			} else {
 				logger.warning("Unable to get the stock price.  Skipping sending the StockPurchase to Kafka");
 				return; //nothing to send if we can't look up the stock price

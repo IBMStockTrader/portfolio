@@ -18,7 +18,6 @@ package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.WatsonInput;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.WatsonOutput;
-import javax.enterprise.context.Dependent;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.HeaderParam;
@@ -29,8 +28,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 @ApplicationPath("/")
 @Path("/")
-@Dependent
-@RegisterRestClient
+@RegisterRestClient(baseUri = "https://gateway.watsonplatform.net/tone-analyzer/api/v3/tone?version=2017-09-21&sentences=false")
 /** mpRestClient "remote" interface for the stock quote microservice */
 public interface WatsonClient {
 	@POST

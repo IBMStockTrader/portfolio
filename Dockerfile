@@ -18,4 +18,4 @@ FROM openliberty/open-liberty:microProfile2-ubi-min
 COPY --chown=1001:0 src/main/liberty/config /config/
 COPY --chown=1001:0 target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
 
-RUN configure.sh
+#RUN configure.sh

@@ -28,8 +28,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 @ApplicationPath("/")
 @Path("/")
-@Dependent
-@RegisterRestClient
+@RegisterRestClient(baseUri = "http://stock-quote-service:9080/stock-quote")
 /** mpRestClient "remote" interface for the stock quote microservice */
 public interface StockQuoteClient {
 	@GET

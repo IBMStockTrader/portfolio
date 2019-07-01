@@ -16,7 +16,6 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
-import javax.enterprise.context.Dependent;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -29,8 +28,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 @ApplicationPath("/")
 @Path("/")
-@Dependent
-@RegisterRestClient
+@RegisterRestClient(baseUri = "http://tradehistory-service:9080/trade-history")
 /** mpRestClient "remote" interface for the stock quote microservice */
 // TODO: Add JWT header (https://github.com/IBMStockTrader/trade-history/issues/38)
 public interface TradeHistoryClient {

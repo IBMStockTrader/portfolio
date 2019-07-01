@@ -16,14 +16,9 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
-import java.util.Iterator;
-import java.util.Set;
-
-//JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /** JSON-B POJO class representing a Portfolio JSON object */
 public class Portfolio {
@@ -35,7 +30,7 @@ public class Portfolio {
     private int free;
     private String sentiment;
     private double nextCommission;
-    private JsonObject stocks;
+    private Map<String,Stock> stocks = new HashMap<>();
 
 
     public Portfolio() { //default constructor
@@ -121,51 +116,32 @@ public class Portfolio {
         nextCommission = newNextCommission;
     }
 
-    public JsonObject getStocks() {
+    public Map<String,Stock> getStocks() {
         return stocks;
     }
 
-    public void setStocks(JsonObject newStocks) {
+    public void setStocks(Map<String,Stock> newStocks) {
         stocks = newStocks;
     }
 
     public void addStock(Stock newStock) {
-        if (newStock != null) {
-            String symbol = newStock.getSymbol();
-            if (symbol != null) {
-                JsonObjectBuilder stocksBuilder = Json.createObjectBuilder();
-            
-                if (stocks != null) { //JsonObject is immutable, so copy current "stocks" into new builder
-                    Iterator<String> iter = stocks.keySet().iterator();
-                    while (iter.hasNext()) {
-                        String key = iter.next();
-                        JsonObject obj = stocks.getJsonObject(key);
-                        stocksBuilder.add(key, obj);
-                    }
-                }
-
-                //can only add a JSON-P object to a JSON-P object; can't add a JSON-B object.  So converting...
-                JsonObjectBuilder builder = Json.createObjectBuilder();
-
-                builder.add("symbol", symbol);
-                builder.add("shares", newStock.getShares());
-                builder.add("commission", newStock.getCommission());
-                builder.add("price", newStock.getPrice());
-                builder.add("total", newStock.getTotal());
-                builder.add("date", newStock.getDate());
-
-                JsonObject stock = builder.build();
-
-                stocksBuilder.add(symbol, stock); //might be replacing an item; caller needs to do any merge (like updatePortfolio does)
-                stocks = stocksBuilder.build();
-            }
-        }
+        Objects.requireNonNull(newStock);
+        stocks.put(newStock.getSymbol(), newStock);
     }
 
-    public boolean equals(Object obj) {
-        boolean isEqual = false;
-        if ((obj != null) && (obj instanceof Portfolio)) isEqual = toString().equals(obj.toString());
-        return isEqual;
+    public boolean equals(Object other) {
+        if (!(other instanceof Portfolio))
+            return false;
+        Portfolio o = (Portfolio) other;
+        return Objects.equals(owner, o.owner) &&
+                Objects.equals(total, o.total) &&
+                Objects.equals(loyalty, o.loyalty) &&
+                Objects.equals(balance, o.balance) &&
+                Objects.equals(commissions, o.commissions) &&
+                Objects.equals(free, o.free) &&
+                Objects.equals(nextCommission, o.nextCommission) &&
+                Objects.equals(sentiment, o.sentiment) &&
+                Objects.equals(stocks, o.stocks);
    }
 
     public String toString() {
