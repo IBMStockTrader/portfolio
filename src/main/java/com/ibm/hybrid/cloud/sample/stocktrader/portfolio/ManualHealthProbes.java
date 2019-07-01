@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 
 //JAX-RS 2.0 (JSR 339)
 import javax.ws.rs.core.MediaType;
+import javax.annotation.security.PermitAll;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Path;
@@ -29,6 +30,7 @@ import javax.ws.rs.ServiceUnavailableException; //http 503 code
 
 
 @Path("health")
+@PermitAll
 /** Implement the Kubernetes readiness and liveness probes */
 public class ManualHealthProbes {
 	private static Logger logger = Logger.getLogger(ManualHealthProbes.class.getName());

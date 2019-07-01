@@ -42,15 +42,13 @@ import javax.sql.DataSource;
 
 //CDI 1.2
 import javax.inject.Inject;
+import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.RequestScoped;
 
 //mpConfig 1.2
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 //mpHealth stuff moved to MPHealthProbes.java
-
-//mpJWT 1.1
-import org.eclipse.microprofile.auth.LoginConfig;
 
 //mpMetrics 1.1
 import org.eclipse.microprofile.metrics.annotation.Counted;
@@ -104,14 +102,13 @@ import javax.ws.rs.WebApplicationException;
 
 
 @Path("/")
-@LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
 @RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
 public class PortfolioService {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
-
+	
 	private static final double ERROR            = -1.0;
 	private static final int    CONFLICT         = 409;         //odd that JAX-RS has no ConflictException
 	private static final short  MAX_ERRORS       = 3;           //health check will fail if this threshold is met
@@ -119,6 +116,9 @@ public class PortfolioService {
 
 	private static final String NOTIFICATION_Q   = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF = "jms/Portfolio/NotificationQueueConnectionFactory";
+	
+	public static final String TRADER_ROLE = "StockTrader";
+	public static final String VIEWER_ROLE = "StockViewer";
 
 	//Our ODM rule will return its own values for levels, generally in all caps
 	private static final String BASIC    = "Basic";
@@ -209,7 +209,7 @@ public class PortfolioService {
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({VIEWER_ROLE, TRADER_ROLE})
 	public Portfolio[] getPortfolios() throws SQLException {
 		ArrayList<Portfolio> portfolioList = new ArrayList<Portfolio>();
 		int count = 0;
@@ -252,13 +252,13 @@ public class PortfolioService {
 
 		return portfolios;
 	}
-
+	
 	@POST
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
+	@RolesAllowed(TRADER_ROLE)
+	public Portfolio createPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest req) throws SQLException {
 		Portfolio portfolio = null;
 		if (owner != null) {
 			if (owner.equalsIgnoreCase(FAIL)) {
@@ -291,7 +291,7 @@ public class PortfolioService {
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({VIEWER_ROLE, TRADER_ROLE})
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		Portfolio newPortfolio = null;
 
@@ -432,6 +432,7 @@ public class PortfolioService {
     @GET
     @Path("/{owner}/returns")
     @Produces(MediaType.TEXT_PLAIN)
+    @RolesAllowed({VIEWER_ROLE, TRADER_ROLE})
     public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
         Double portfolioValue = getPortfolio(owner, request).getTotal();
         
@@ -443,7 +444,7 @@ public class PortfolioService {
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed(TRADER_ROLE)
 	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner); //throws a 404 if not found
 
@@ -483,7 +484,7 @@ public class PortfolioService {
 	@DELETE
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed(TRADER_ROLE)
 	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
@@ -498,7 +499,7 @@ public class PortfolioService {
 	@Path("/{owner}/feedback")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed(TRADER_ROLE)
 	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
 		try {
