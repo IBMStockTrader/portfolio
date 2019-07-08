@@ -285,7 +285,6 @@ public class PortfolioService extends Application {
 		return portfolio;
 	}
 
-	//TODO - convert to JPA
 	@GET
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -304,7 +303,7 @@ public class PortfolioService extends Application {
 			ArrayList<Stock> stocks = new ArrayList<Stock>();
 
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
-			List<Stock> results = em.createNamedQuery("Stock.findAll", Stock.class).setParameter("owner", owner).getResultList();
+			List<Stock> results = em.createNamedQuery("Stock.findByOwner", Stock.class).setParameter("owner", owner).getResultList();
 
 			int count = 0;
 			logger.fine("Iterating over results");
@@ -435,7 +434,6 @@ public class PortfolioService extends Application {
         return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
     }
 
-	//TODO - convert to JPA
 	@PUT
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -444,59 +442,76 @@ public class PortfolioService extends Application {
 	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner); //throws a 404 if not found
 
-		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
-		ResultSet results = invokeJDBCWithResults("SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+		Stock stock = new Stock();
+		stock.setCommission(commission);
+		stock.setSymbol(symbol);
+		stock.setShares(shares);
 
-		if (results.next()) { //row exists
-			int oldShares = results.getInt("shares");
-			double oldCommission = results.getDouble("commission");
-			releaseResults(results);
+		Portfolio portfolio = em.find(Portfolio.class, owner);
+		if(portfolio != null) {
+			stock.setPortfolio(portfolio);
+		} else {
+			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
+		}
+        
+		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+		List<Stock> results = em.createNamedQuery("Stock.findByOwnerAndSymbol", Stock.class)
+								.setParameter("owner", owner)
+								.setParameter("symbol", symbol).getResultList();
+
+		if (!results.isEmpty()) { //row exists
+			stock = results.get(0);
+			int oldShares = stock.getShares();
+			double oldCommission = stock.getCommission();
 
 			int newShares = oldShares+shares;
 			double newCommission = oldCommission+commission;
 			if (newShares > 0) {
 				logger.fine("Running following SQL: UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				invokeJDBC("UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+				stock.setShares(newShares);
+				stock.setCommission(newCommission);
 				//getPortfolio will fill in the price, date and total
 			} else {
 				logger.fine("Running following SQL: DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				invokeJDBC("DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+				stock = em.merge(stock);
+				em.remove(stock);
 			}
 		} else {
 			logger.fine("Running following SQL: INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
-			invokeJDBC("INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
+			em.persist(stock);
 			//getPortfolio will fill in the price, date and total
 		}
 
 		//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
 		logger.info("Refreshing portfolio for "+owner);
-		Portfolio portfolio = getPortfolio(owner, request);
+		portfolio = getPortfolio(owner, request);
 
 		invokeKafka(portfolio, symbol, shares, commission);
 
 		return portfolio;
 	}
 
-	//TODO - convert to JPA
 	@DELETE
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Transactional
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
 		logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
-		invokeJDBC("DELETE FROM Portfolio WHERE owner = '"+owner+"'");
+		portfolio = em.merge(portfolio);
+		em.remove(portfolio);
 		logger.info("Successfully deleted portfolio for "+owner);
 
 		return portfolio; //maybe this method should return void instead?
 	}
 
-	//TODO - convert to JPA
 	@POST
 	@Path("/{owner}/feedback")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Transactional
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
@@ -525,8 +540,10 @@ public class PortfolioService extends Application {
 		Feedback feedback = getFeedback(owner, sentiment);
 		freeTrades += feedback.getFree();
 
+		portfolio.setFree(freeTrades);
+		portfolio.setSentiment(sentiment);
+
 		logger.fine("Running following JDBC command: UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
-		invokeJDBC("UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
 
 		logger.info("Returning feedback: "+feedback.toString());
 		return feedback;

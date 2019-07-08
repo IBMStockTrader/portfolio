@@ -27,7 +27,9 @@ import javax.persistence.ManyToOne;
 
 @Entity
 @Table
-@NamedQuery(name = "Stock.findAll", query = "SELECT s FROM Stock s WHERE s.portfolio.owner = :owner")
+@NamedQuery(name = "Stock.findByOwner", query = "SELECT s FROM Stock s WHERE s.portfolio.owner = :owner")
+@NamedQuery(name = "Stock.findByOwnerAndSymbol", 
+            query = "SELECT s FROM Stock s WHERE s.portfolio.owner = :owner AND s.symbol = :symbol")
 /** JSON-B POJO class representing a Stock JSON object */
 public class Stock {
 
