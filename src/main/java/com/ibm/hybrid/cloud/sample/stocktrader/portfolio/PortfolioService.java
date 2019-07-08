@@ -114,7 +114,7 @@ import javax.persistence.PersistenceContext;
 
 @ApplicationPath("/")
 @Path("/")
-//@LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
+@LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
 @RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
@@ -162,7 +162,7 @@ public class PortfolioService extends Application {
 	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
 	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
 	private @Inject @ConfigProperty(name = "WATSON_ID", defaultValue = "apikey") String watsonId;
-	//private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd; //if using an API Key, it goes here
+	private @Inject @ConfigProperty(name = "WATSON_PWD") String watsonPwd; //if using an API Key, it goes here
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
@@ -331,7 +331,6 @@ public class PortfolioService extends Application {
 
 					date = quote.getDate();
 					price = quote.getPrice();
-
 					total = shares * price;
 
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
@@ -525,13 +524,13 @@ public class PortfolioService extends Application {
 		int freeTrades = portfolio.getFree();
 
 		try {
-			//String credentials = watsonId + ":" + watsonPwd; //Watson accepts basic auth
-			//String authorization = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+			String credentials = watsonId + ":" + watsonPwd; //Watson accepts basic auth
+			String authorization = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
 
 			logger.info("Calling Watson Tone Analyzer");
 
-			//WatsonOutput watson = watsonClient.getTone(authorization, input);
-			sentiment = "testing purposes";
+			WatsonOutput watson = watsonClient.getTone(authorization, input);
+			sentiment = watson.determineSentiment();
 		} catch (Throwable t) {
 			logger.info("Error from Watson, with following input: "+input.toString());
 			logException(t);
