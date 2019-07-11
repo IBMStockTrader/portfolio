@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Base64;
 import java.util.UUID;
@@ -37,7 +36,6 @@ import java.util.logging.Logger;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import javax.sql.DataSource;
 
@@ -89,7 +87,7 @@ import javax.naming.NamingException;
 
 //Servlet 4.0
 import javax.servlet.http.HttpServletRequest;
-
+import javax.sound.sampled.Port;
 //JAX-RS 2.0 (JSR 339)
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Context;
@@ -300,8 +298,6 @@ public class PortfolioService extends Application {
 
 			Portfolio portfolio = new Portfolio(owner);
 
-			ArrayList<Stock> stocks = new ArrayList<Stock>();
-
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
 			List<Stock> results = em.createNamedQuery("Stock.findByOwner", Stock.class).setParameter("owner", owner).getResultList();
 
@@ -370,8 +366,6 @@ public class PortfolioService extends Application {
 			}
 			logger.info("Processed "+count+" stocks for "+owner);
 
-			//releaseResults(results);
-
 			portfolio.setTotal(overallTotal);
 
 			String loyalty = processLoyaltyLevel(owner, overallTotal, oldLoyalty, request);
@@ -383,9 +377,6 @@ public class PortfolioService extends Application {
 			portfolio.setFree(free);
 			portfolio.setSentiment(oldPortfolio.getSentiment());
 			portfolio.setNextCommission(free>0 ? 0.0 : getCommission(loyalty));
-
-			logger.fine("Running following SQL: UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
-			//invokeJDBC("UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
 
 			logger.info("Returning "+portfolio.toString());
 			newPortfolio = portfolio;
@@ -623,9 +614,9 @@ public class PortfolioService extends Application {
 			logger.info("JDBC Datasource successfully obtained!"); //exception would have occurred otherwise
 
 			//lookup our JMS objects
-			//logger.info("Looking up our JMS resources");
-			//queueCF = (QueueConnectionFactory) context.lookup(NOTIFICATION_QCF);
-			//queue = (Queue) context.lookup(NOTIFICATION_Q);
+			logger.info("Looking up our JMS resources");
+			queueCF = (QueueConnectionFactory) context.lookup(NOTIFICATION_QCF);
+			queue = (Queue) context.lookup(NOTIFICATION_Q);
 
 			logger.info("JMS Initialization completed successfully!"); //exception would have occurred otherwise
 			staticInitialized = true;
@@ -769,9 +760,16 @@ public class PortfolioService extends Application {
 	
 			double price = -1;
 			String owner = portfolio.getOwner();
-			JsonObject stock = portfolio.getStocks().getJsonObject(symbol);
+			List<Stock> stocks = portfolio.getStocks();
+			Stock stock = null;
+
+			for (Stock s : stocks){
+				if(s.getSymbol().equalsIgnoreCase(symbol))
+					stock = s;
+			}
+
 			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
-				price = stock.getJsonNumber("price").doubleValue();
+				price = stock.getPrice();
 			} else {
 				logger.warning("Unable to get the stock price.  Skipping sending the StockPurchase to Kafka");
 				return; //nothing to send if we can't look up the stock price

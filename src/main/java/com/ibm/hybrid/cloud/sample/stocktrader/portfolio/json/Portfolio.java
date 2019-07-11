@@ -16,12 +16,8 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
-import java.util.Iterator;
-
-//JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -29,6 +25,9 @@ import javax.persistence.Transient;
 import javax.persistence.Id;
 import javax.persistence.Column;
 import javax.persistence.NamedQuery;
+import javax.persistence.OneToMany;
+
+import org.eclipse.persistence.annotations.CascadeOnDelete;
 
 @Entity
 @Table
@@ -48,8 +47,10 @@ public class Portfolio {
     private String sentiment;
     @Transient
     private double nextCommission;
-    @Transient
-    private JsonObject stocks;
+
+    @OneToMany(mappedBy = "portfolio")
+    @CascadeOnDelete
+    private List<Stock> stocks = new ArrayList<Stock>();
 
     public Portfolio() { //default constructor
     }
@@ -134,44 +135,17 @@ public class Portfolio {
         nextCommission = newNextCommission;
     }
 
-    public JsonObject getStocks() {
+    public List<Stock> getStocks() {
         return stocks;
     }
 
-    public void setStocks(JsonObject newStocks) {
+    public void setStocks(List<Stock> newStocks) {
         stocks = newStocks;
     }
 
     public void addStock(Stock newStock) {
         if (newStock != null) {
-            String symbol = newStock.getSymbol();
-            if (symbol != null) {
-                JsonObjectBuilder stocksBuilder = Json.createObjectBuilder();
-            
-                if (stocks != null) { //JsonObject is immutable, so copy current "stocks" into new builder
-                    Iterator<String> iter = stocks.keySet().iterator();
-                    while (iter.hasNext()) {
-                        String key = iter.next();
-                        JsonObject obj = stocks.getJsonObject(key);
-                        stocksBuilder.add(key, obj);
-                    }
-                }
-
-                //can only add a JSON-P object to a JSON-P object; can't add a JSON-B object.  So converting...
-                JsonObjectBuilder builder = Json.createObjectBuilder();
-
-                builder.add("symbol", symbol);
-                builder.add("shares", newStock.getShares());
-                builder.add("commission", newStock.getCommission());
-                builder.add("price", newStock.getPrice());
-                builder.add("total", newStock.getTotal());
-                builder.add("date", newStock.getDate());
-
-                JsonObject stock = builder.build();
-
-                stocksBuilder.add(symbol, stock); //might be replacing an item; caller needs to do any merge (like updatePortfolio does)
-                stocks = stocksBuilder.build();
-            }
+            stocks.add(newStock);
         }
     }
 
