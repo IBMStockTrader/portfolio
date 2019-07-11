@@ -126,6 +126,6 @@
             <security-role id="StockTrader" name="StockTrader">
                 <special-subject type="ALL_AUTHENTICATED_USERS" id="IBMid"/>
             </security-role>
-        </application-bnd> 
+        </application-bnd>
     </webApplication>
 </server>
