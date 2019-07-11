@@ -17,6 +17,5 @@ FROM open-liberty:microProfile2
 
 COPY --chown=1001:0 src/main/liberty/config /config/
 COPY --chown=1001:0 target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-COPY --chown=1001:0 db-derby-10.14.2.0-lib/lib /derby/lib
 
 RUN configure.sh

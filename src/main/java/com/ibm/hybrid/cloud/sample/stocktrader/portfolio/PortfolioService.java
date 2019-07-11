@@ -87,7 +87,7 @@ import javax.naming.NamingException;
 
 //Servlet 4.0
 import javax.servlet.http.HttpServletRequest;
-import javax.sound.sampled.Port;
+
 //JAX-RS 2.0 (JSR 339)
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Context;
