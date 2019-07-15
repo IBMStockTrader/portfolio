@@ -327,12 +327,11 @@ public class PortfolioService extends Application {
 
 					date = quote.getDate();
 					price = quote.getPrice();
+
 					total = shares * price;
 
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
 					logger.fine("Running following SQL: UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				
-					//invokeJDBC("UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
 				} catch (Throwable t) {
 					logger.warning("Unable to get fresh stock quote.  Using cached values instead");
@@ -647,72 +646,6 @@ public class PortfolioService extends Application {
 			logger.warning("ODM_ID config property is null");
 		}
 		initialized = true;
-	}
-
-	@Traced
-	private void invokeJDBC(String command) throws SQLException {
-		try {
-			initialize();
-		} catch (NamingException ne) {
-			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
-		}
-
-		try {
-			logger.fine("Running SQL executeUpdate command: "+command);
-			Connection connection = datasource.getConnection();
-			Statement statement = connection.createStatement();
-	
-			statement.executeUpdate(command);
-	
-			statement.close();
-			connection.close();
-	
-			logger.info("SQL executeUpdate command completed successfully");
-		} catch (SQLException sqle) {
-			logException(sqle);
-			throw sqle;
-		}
-	}
-
-	@Traced
-	private ResultSet invokeJDBCWithResults(String command) throws SQLException {
-		ResultSet results = null;
-
-		try {
-			initialize();
-		} catch (NamingException ne) {
-			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
-		}
-
-		try {
-			logger.fine("Running SQL executeQuery command: "+command);
-			Connection connection = datasource.getConnection();
-			Statement statement = connection.createStatement();
-	
-			statement.executeQuery(command);
-	
-			results = statement.getResultSet();
-			logger.info("SQL executeQuery command completed successfully - returning results");
-		} catch (SQLException sqle) {
-			logException(sqle);
-			throw sqle;
-		}
-	
-		return results; //caller needs to pass this to releaseResults when done
-	}
-
-	@Traced
-	private void releaseResults(ResultSet results) throws SQLException {
-		logger.info("Releasing JDBC resources");
-
-		Statement statement = results.getStatement();
-		Connection connection = statement.getConnection();
-
-		results.close();
-		statement.close();
-		connection.close();
-
-		logger.info("Released JDBC resources");
 	}
 
 	/** Send a JSON message to our notification queue. */
