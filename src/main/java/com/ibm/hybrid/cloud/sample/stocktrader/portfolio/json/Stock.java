@@ -42,6 +42,7 @@ public class Stock {
     private double total;
     private String date;
 
+    @Id
     @ManyToOne
     @JoinColumn(name = "owner")
     private Portfolio portfolio;
