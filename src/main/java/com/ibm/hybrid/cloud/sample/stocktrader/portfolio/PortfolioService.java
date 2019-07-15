@@ -733,7 +733,7 @@ public class PortfolioService extends Application {
 			commission = 0.0;
 
 			logger.info("Using free trade for "+owner);
-			invokeJDBC("UPDATE Portfolio SET free = "+free+" WHERE owner = '"+owner+"'");
+			portfolio.setFree(free);
 		} else {
 			double commissions = portfolio.getCommissions();
 			commissions += commission;
@@ -742,7 +742,8 @@ public class PortfolioService extends Application {
 			balance -= commission;
 
 			logger.info("Charging commission of $"+commission+" for "+owner);
-			invokeJDBC("UPDATE Portfolio SET commissions = "+commissions+", balance = "+balance+" WHERE owner = '"+owner+"'");
+			portfolio.setCommissions(commissions);
+			portfolio.setBalance(balance);
 		}
 
 		logger.info("Returning a commission of $"+commission);
