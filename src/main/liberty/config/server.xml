@@ -45,7 +45,6 @@
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
 -->
 
-<!--
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
         <jdbcDriver>
@@ -56,16 +55,6 @@
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> 
     </dataSource> 
--->
-    
-    <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
-    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB">
-        <jdbcDriver libraryRef="DerbyLib" />
-        <properties.derby.embedded databaseName="/derby/lib/trader" createDatabase="create" /> 
-    </dataSource>
-    <library id="DerbyLib">
-        <fileset dir="/derby/lib"/>
-    </library>
 
     <authData id="MQ-Credentials" user="${env.MQ_ID}" password="${env.MQ_PASSWORD}"></authData>
 
