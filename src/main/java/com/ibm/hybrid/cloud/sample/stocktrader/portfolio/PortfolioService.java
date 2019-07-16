@@ -511,6 +511,7 @@ public class PortfolioService extends Application {
 		}
 
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		portfolio = em.merge(portfolio);
 		int freeTrades = portfolio.getFree();
 
 		try {
@@ -531,8 +532,6 @@ public class PortfolioService extends Application {
 
 		portfolio.setFree(freeTrades);
 		portfolio.setSentiment(sentiment);
-
-		logger.fine("Running following JDBC command: UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
 
 		logger.info("Returning feedback: "+feedback.toString());
 		return feedback;
@@ -723,6 +722,7 @@ public class PortfolioService extends Application {
 	private double processCommission(String owner) throws SQLException {
 		logger.info("Getting loyalty level for "+owner);
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		portfolio = em.merge(portfolio);
 		String loyalty = portfolio.getLoyalty();
 	
 		double commission = getCommission(loyalty);
