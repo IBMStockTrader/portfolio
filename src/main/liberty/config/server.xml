@@ -53,7 +53,7 @@
             </library>
         </jdbcDriver>
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
-            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead --> 
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
 
     <authData id="MQ-Credentials" user="${env.MQ_ID}" password="${env.MQ_PASSWORD}"></authData>
