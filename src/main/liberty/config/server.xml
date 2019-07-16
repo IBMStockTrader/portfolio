@@ -44,11 +44,12 @@
 
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" isolationLevel="TRANSACTION_READ_COMMITTED">
         <connectionManager minPoolSize="5" maxPoolSize="50"/>
-        <jdbcDriver libraryRef="PostgreSQL"/>
-<!--         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" -->
-<!--             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
-        <properties serverName="${JDBC_HOST}" portNumber="${JDBC_PORT}" databaseName="${JDBC_DB}"
-                    user="${JDBC_ID}" password="${JDBC_PASSWORD}"/>
+        <jdbcDriver libraryRef="DB2"/>
+        <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+        <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> 
+<!--         <properties serverName="${JDBC_HOST}" portNumber="${JDBC_PORT}" databaseName="${JDBC_DB}" -->
+<!--                     user="${JDBC_ID}" password="${JDBC_PASSWORD}"/> -->
     </dataSource>
     <library id="DB2" description="DB2 JDBC driver jar">
         <file name="/config/db2jcc4.jar"/>

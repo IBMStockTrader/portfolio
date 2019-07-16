@@ -24,19 +24,19 @@ public class AppConfig implements SharedContainerConfiguration {
             .withEnv("JWT_ISSUER", "unused")
             .withEnv("MQ_PORT", "1234")
             .withMpRestClient(StockQuoteClient.class, "http://mockserver:" + MockServerContainer.PORT + "/stock-quote")
-            //.withEnv("STOCK_QUOTE_URL", "http://mockserver:" + MockServerContainer.PORT + "/stockquote")
-            .withEnv("JDBC_HOST", "postgre")
-            .withEnv("JDBC_PORT", "5432")
+            .withEnv("JDBC_HOST", "db2")
+            .withEnv("JDBC_PORT", "50000")
             .withEnv("JDBC_DB", "Sample")
             .withEnv("JDBC_ID", "dbuser")
             .withEnv("JDBC_PASSWORD", "dbpass");
     
     @Container
-    public static PostgreSQLContainer db = new PostgreSQLContainer<>()
+    public static Db2Container db = new Db2Container()
         .withDatabaseName("Sample")
         .withUsername("dbuser")
         .withPassword("dbpass")
-        .withNetworkAliases("postgre")
+        .withNetworkAliases("db2")
+        .acceptLicense()
         .withInitScript("createTables.ddl");
     
     @Container
@@ -47,8 +47,8 @@ public class AppConfig implements SharedContainerConfiguration {
     
     @Override
     public void startContainers() {
-        Arrays.asList(db, mockServer).parallelStream().forEach(GenericContainer::start);
-        app.start();
+        // All services can be started in parallel as long as their readiness checks do not depend on each other
+        Arrays.asList(db, mockServer, app).parallelStream().forEach(GenericContainer::start);
         mockStockQuoteClient = new MockServerClient(mockServer.getContainerIpAddress(), mockServer.getServerPort());
     }
 
