@@ -42,15 +42,13 @@ import javax.sql.DataSource;
 
 //CDI 1.2
 import javax.inject.Inject;
+import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.RequestScoped;
 
 //mpConfig 1.2
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 //mpHealth stuff moved to MPHealthProbes.java
-
-//mpJWT 1.1
-import org.eclipse.microprofile.auth.LoginConfig;
 
 //mpMetrics 1.1
 import org.eclipse.microprofile.metrics.annotation.Counted;
@@ -76,12 +74,6 @@ import javax.jms.QueueSession;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-//JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-
 //JNDI 1.0
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -90,10 +82,8 @@ import javax.naming.NamingException;
 import javax.servlet.http.HttpServletRequest;
 
 //JAX-RS 2.0 (JSR 339)
-import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.BadRequestException; //400 error
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -108,16 +98,14 @@ import javax.ws.rs.Path;
 import javax.ws.rs.WebApplicationException;
 
 
-@ApplicationPath("/")
 @Path("/")
-@LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
 @RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
  *  TODO: Should update to use PreparedStatements.
  */
-public class PortfolioService extends Application {
+public class PortfolioService {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
-
+	
 	private static final double ERROR            = -1.0;
 	private static final int    CONFLICT         = 409;         //odd that JAX-RS has no ConflictException
 	private static final short  MAX_ERRORS       = 3;           //health check will fail if this threshold is met
@@ -125,6 +113,9 @@ public class PortfolioService extends Application {
 
 	private static final String NOTIFICATION_Q   = "jms/Portfolio/NotificationQueue";
 	private static final String NOTIFICATION_QCF = "jms/Portfolio/NotificationQueueConnectionFactory";
+	
+	public static final String TRADER_ROLE = "StockTrader";
+	public static final String VIEWER_ROLE = "StockViewer";
 
 	//Our ODM rule will return its own values for levels, generally in all caps
 	private static final String BASIC    = "Basic";
@@ -166,8 +157,6 @@ public class PortfolioService extends Application {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using Stock Quote URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Stock Quote URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = TradeHistoryClient.class.getName() + "/mp-rest/url";
@@ -175,8 +164,6 @@ public class PortfolioService extends Application {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using Trade History URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Trade History URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
@@ -184,8 +171,6 @@ public class PortfolioService extends Application {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using ODM URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("ODM URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 
 		mpUrlPropName = WatsonClient.class.getName() + "/mp-rest/url";
@@ -193,8 +178,6 @@ public class PortfolioService extends Application {
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
 			logger.info("Using Watson URL from config map: " + urlFromEnv);
 			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Watson URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 	}
 
@@ -215,7 +198,7 @@ public class PortfolioService extends Application {
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({VIEWER_ROLE, TRADER_ROLE})
 	public Portfolio[] getPortfolios() throws SQLException {
 		ArrayList<Portfolio> portfolioList = new ArrayList<Portfolio>();
 		int count = 0;
@@ -258,13 +241,13 @@ public class PortfolioService extends Application {
 
 		return portfolios;
 	}
-
+	
 	@POST
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
+	@RolesAllowed(TRADER_ROLE)
+	public Portfolio createPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest req) throws SQLException {
 		Portfolio portfolio = null;
 		if (owner != null) {
 			if (owner.equalsIgnoreCase(FAIL)) {
@@ -297,7 +280,7 @@ public class PortfolioService extends Application {
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed({VIEWER_ROLE, TRADER_ROLE})
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		Portfolio newPortfolio = null;
 
@@ -438,6 +421,7 @@ public class PortfolioService extends Application {
     @GET
     @Path("/{owner}/returns")
     @Produces(MediaType.TEXT_PLAIN)
+    @RolesAllowed({VIEWER_ROLE, TRADER_ROLE})
     public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
         Double portfolioValue = getPortfolio(owner, request).getTotal();
         
@@ -449,7 +433,7 @@ public class PortfolioService extends Application {
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed(TRADER_ROLE)
 	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner); //throws a 404 if not found
 
@@ -489,7 +473,7 @@ public class PortfolioService extends Application {
 	@DELETE
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed(TRADER_ROLE)
 	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
@@ -504,7 +488,7 @@ public class PortfolioService extends Application {
 	@Path("/{owner}/feedback")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@RolesAllowed(TRADER_ROLE)
 	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
 		try {
@@ -605,20 +589,13 @@ public class PortfolioService extends Application {
 	}
 
 	private static void staticInitialize() throws NamingException {
-		if (!staticInitialized) try {
+	    if (staticInitialized)
+	        return;
+	    
+		try {
 			logger.info("Obtaining JDBC Datasource");
-
-			InitialContext context = new InitialContext();
-			datasource = (DataSource) context.lookup("jdbc/Portfolio/PortfolioDB");
-
+			datasource = InitialContext.doLookup("jdbc/Portfolio/PortfolioDB");
 			logger.info("JDBC Datasource successfully obtained!"); //exception would have occurred otherwise
-
-			//lookup our JMS objects
-			logger.info("Looking up our JMS resources");
-			queueCF = (QueueConnectionFactory) context.lookup(NOTIFICATION_QCF);
-			queue = (Queue) context.lookup(NOTIFICATION_Q);
-
-			logger.info("JMS Initialization completed successfully!"); //exception would have occurred otherwise
 			staticInitialized = true;
 		} catch (NamingException ne) {
 			logger.warning("JNDI lookup failed.  Initialization did NOT complete.  Expect severe failures!");
@@ -628,6 +605,18 @@ public class PortfolioService extends Application {
 			logger.warning("Runtime exception.  Initialization did NOT complete.  Expect severe failures!");
 			logException(re);
 			throw re;
+		}
+		
+		try {
+	      //lookup our JMS objects
+          logger.info("Looking up our JMS resources");
+          queueCF = InitialContext.doLookup(NOTIFICATION_QCF);
+          queue = InitialContext.doLookup(NOTIFICATION_Q);
+          logger.info("JMS Initialization completed successfully!"); //exception would have occurred otherwise
+		} catch(NamingException e) {
+		    logger.warning("JNDI lookup of JMS resource failed.");
+		    logException(e);
+		    // allow initialization to continue if JMS resources not available
 		}
 	}
 
@@ -760,9 +749,9 @@ public class PortfolioService extends Application {
 	
 			double price = -1;
 			String owner = portfolio.getOwner();
-			JsonObject stock = portfolio.getStocks().getJsonObject(symbol);
+			Stock stock = portfolio.getStocks().get(symbol);
 			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
-				price = stock.getJsonNumber("price").doubleValue();
+			    price = stock.getPrice();
 			} else {
 				logger.warning("Unable to get the stock price.  Skipping sending the StockPurchase to Kafka");
 				return; //nothing to send if we can't look up the stock price
