@@ -17,6 +17,7 @@ kind: Service
 metadata:
   name: "{{  .Chart.Name }}-service"
   labels:
+    app: "{{ .Release.Name }}-{{ .Chart.Name }}"
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
 spec:
   type: {{ .Values.service.type }}
