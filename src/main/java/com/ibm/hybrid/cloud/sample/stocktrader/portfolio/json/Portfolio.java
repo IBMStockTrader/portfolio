@@ -18,6 +18,7 @@ package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -30,9 +31,9 @@ import javax.persistence.OneToMany;
 import javax.json.JsonObject;
 import javax.json.bind.annotation.JsonbTransient;
 
+//JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
 import javax.json.Json;
 import javax.json.JsonObjectBuilder;
-import java.util.Iterator;
 
 @Entity
 @Table
@@ -142,14 +143,14 @@ public class Portfolio {
         nextCommission = newNextCommission;
     }
 
-    public void setStocks(JsonObject newStocks) {
-        stocks = newStocks;
-    }
-    
     public JsonObject getStocks() {
         return stocks;
     }
 
+    public void setStocks(JsonObject newStocks) {
+        stocks = newStocks;
+    }
+   
     public void addStock(Stock newStock) {
         if (newStock != null) {
             String symbol = newStock.getSymbol();
