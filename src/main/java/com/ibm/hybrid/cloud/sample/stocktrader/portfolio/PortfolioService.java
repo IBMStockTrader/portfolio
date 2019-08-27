@@ -18,6 +18,7 @@ package com.ibm.hybrid.cloud.sample.stocktrader.portfolio;
 
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client.*;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.*;
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.dao.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -33,10 +34,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 //JDBC 4.0 (JSR 221)
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import javax.sql.DataSource;
 
 //CDI 1.2
@@ -76,10 +74,7 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 
 //JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.Json;
-import javax.json.JsonArray;
 import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
 
 //JNDI 1.0
 import javax.naming.InitialContext;
@@ -105,10 +100,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.WebApplicationException;
-
-//JPA
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 @ApplicationPath("/")
 @Path("/")
@@ -149,8 +140,11 @@ public class PortfolioService extends Application {
 
 	private static EventStreamsProducer kafkaProducer = null;
 
-	@PersistenceContext(name="jpa-unit")
-	private EntityManager em;
+	@Inject
+	private PortfolioDao portfolioDAO;
+
+	@Inject
+	private StockDao stockDAO;
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 	private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
@@ -225,7 +219,7 @@ public class PortfolioService extends Application {
 	public Portfolio[] getPortfolios() throws SQLException {
 
 		logger.fine("Running following SQL: SELECT * FROM Portfolio");
-		List<Portfolio> portfolioList = em.createNamedQuery("Portfolio.findAll", Portfolio.class).getResultList();
+		List<Portfolio> portfolioList = portfolioDAO.readAllPortfolios();
 		int count = portfolioList.size();
 	
 		logger.info("Returning "+count+" portfolios");
@@ -269,8 +263,8 @@ public class PortfolioService extends Application {
 
 			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
 			
-			if(em.find(Portfolio.class, owner) == null) {
-				em.persist(portfolio);
+			if(portfolioDAO.readEvent(owner) == null) {
+				portfolioDAO.createPortfolio(portfolio);
 			} else {
 				logger.warning("Portfolio already exists for: "+owner);
 				throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);			
@@ -289,31 +283,21 @@ public class PortfolioService extends Application {
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-		Portfolio newPortfolio = null;
-
-		Portfolio oldPortfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
-		if (oldPortfolio != null) {
-			String oldLoyalty = oldPortfolio.getLoyalty();
+		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		if (portfolio != null) {
+			String oldLoyalty = portfolio.getLoyalty();
 			double overallTotal = 0;
 
-			Portfolio portfolio = new Portfolio(owner);
-
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
-			List<Stock> results = em.createNamedQuery("Stock.findByOwner", Stock.class).setParameter("owner", owner).getResultList();
+			List<Stock> results = stockDAO.readStockByOwner(owner);
 
 			int count = 0;
 			logger.fine("Iterating over results");
-			for (Stock result : results) {
+			for (Stock stock : results) {
 				count++;
 
-				String symbol = result.getSymbol();
-				Stock stock = new Stock(symbol);
-
-				int shares = result.getShares();
-				stock.setShares(shares);
-
-				double commission = result.getCommission();
-				stock.setCommission(commission);
+				String symbol = stock.getSymbol();
+				int shares = stock.getShares();
 
 				String date = null;
 				double price = 0;
@@ -329,22 +313,29 @@ public class PortfolioService extends Application {
 					price = quote.getPrice();
 
 					total = shares * price;
-
+					
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
-					logger.fine("Running following SQL: UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
+					stock.setDate(date);
+					stock.setPrice(price);
+					stock.setTotal(total);
+					stock.setPortfolio(portfolio);
+
+					stockDAO.updateStock(stock);
+					stockDAO.detachStock(stock);
+
 				} catch (Throwable t) {
 					logger.warning("Unable to get fresh stock quote.  Using cached values instead");
 					logException(t);
 
-					date = result.getDate();
+					date = stock.getDate();
 					if (date == null) {
 						Date now = new Date();
 						if (dateFormatter == null) dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
 						date = dateFormatter.format(now);
 					}
 
-					price = result.getPrice();
+					price = stock.getPrice();
 					if (price == 0) { //SQL returns 0 for a double if the column was null
 						price = ERROR;
 						total = ERROR;
@@ -370,41 +361,28 @@ public class PortfolioService extends Application {
 			String loyalty = processLoyaltyLevel(owner, overallTotal, oldLoyalty, request);
 			portfolio.setLoyalty(loyalty);
 
-			int free = oldPortfolio.getFree();
-			portfolio.setBalance(oldPortfolio.getBalance());
-			portfolio.setCommissions(oldPortfolio.getCommissions());
+			int free = portfolio.getFree();
 			portfolio.setFree(free);
-			portfolio.setSentiment(oldPortfolio.getSentiment());
 			portfolio.setNextCommission(free>0 ? 0.0 : getCommission(loyalty));
 
+			portfolioDAO.updatePortfolio(portfolio);
+
 			logger.info("Returning "+portfolio.toString());
-			newPortfolio = portfolio;
 		} else {
-			newPortfolio = new Portfolio(); //so we don't return null
+			portfolio = new Portfolio(); //so we don't return null
 			logger.warning("No portfolio found for "+owner); //shouldn't get here; an exception with a 404 should be thrown instead
 		}
 
-		return newPortfolio;
+		return portfolio;
 	}
 
 	private Portfolio getPortfolioWithoutStocks(String owner) throws SQLException {
 		logger.fine("Running following SQL: SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
-		Portfolio result = em.find(Portfolio.class, owner);
 
-		Portfolio portfolio = null;
-		if (result != null) {
+		Portfolio portfolio = portfolioDAO.readEvent(owner);
+
+		if (portfolio != null) {
 			logger.info("Found portfolio for "+owner);
-
-			double total = result.getTotal();
-			String loyalty = result.getLoyalty();
-			double balance = result.getBalance();
-			double commissions = result.getCommissions();
-			int free = result.getFree();
-			String sentiment = result.getSentiment();
-
-			double nextCommission = getCommission(loyalty);
-
-			portfolio = new Portfolio(owner, total, loyalty, balance, commissions, free, sentiment, nextCommission);
 		} else {
 			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
 		}
@@ -415,10 +393,9 @@ public class PortfolioService extends Application {
     
     @GET
     @Path("/{owner}/returns")
-    @Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
     public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-        Double portfolioValue = getPortfolio(owner, request).getTotal();
-        
+		Double portfolioValue = getPortfolio(owner, request).getTotal();
         String jwt = request.getHeader("Authorization");
         return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
     }
@@ -436,7 +413,7 @@ public class PortfolioService extends Application {
 		stock.setSymbol(symbol);
 		stock.setShares(shares);
 
-		Portfolio portfolio = em.find(Portfolio.class, owner);
+		Portfolio portfolio = portfolioDAO.readEvent(owner);
 		if(portfolio != null) {
 			stock.setPortfolio(portfolio);
 		} else {
@@ -444,9 +421,7 @@ public class PortfolioService extends Application {
 		}
         
 		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
-		List<Stock> results = em.createNamedQuery("Stock.findByOwnerAndSymbol", Stock.class)
-								.setParameter("owner", owner)
-								.setParameter("symbol", symbol).getResultList();
+		List<Stock> results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
 
 		if (!results.isEmpty()) { //row exists
 			stock = results.get(0);
@@ -462,12 +437,11 @@ public class PortfolioService extends Application {
 				//getPortfolio will fill in the price, date and total
 			} else {
 				logger.fine("Running following SQL: DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				stock = em.merge(stock);
-				em.remove(stock);
+				stockDAO.deleteStock(stock);
 			}
 		} else {
 			logger.fine("Running following SQL: INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
-			em.persist(stock);
+			stockDAO.createStock(stock);
 			//getPortfolio will fill in the price, date and total
 		}
 
@@ -489,8 +463,7 @@ public class PortfolioService extends Application {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
 		logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
-		portfolio = em.merge(portfolio);
-		em.remove(portfolio);
+		portfolioDAO.deletePortfolio(portfolio);
 		logger.info("Successfully deleted portfolio for "+owner);
 
 		return portfolio; //maybe this method should return void instead?
@@ -511,7 +484,7 @@ public class PortfolioService extends Application {
 		}
 
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
-		portfolio = em.merge(portfolio);
+		portfolioDAO.updatePortfolio(portfolio);
 		int freeTrades = portfolio.getFree();
 
 		try {
@@ -692,16 +665,10 @@ public class PortfolioService extends Application {
 	
 			double price = -1;
 			String owner = portfolio.getOwner();
-			List<Stock> stocks = portfolio.getStocks();
-			Stock stock = null;
-
-			for (Stock s : stocks){
-				if(s.getSymbol().equalsIgnoreCase(symbol))
-					stock = s;
-			}
+			JsonObject stock = portfolio.getStocks();
 
 			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
-				price = stock.getPrice();
+				price = stock.getJsonNumber("price").doubleValue();
 			} else {
 				logger.warning("Unable to get the stock price.  Skipping sending the StockPurchase to Kafka");
 				return; //nothing to send if we can't look up the stock price
@@ -722,7 +689,7 @@ public class PortfolioService extends Application {
 	private double processCommission(String owner) throws SQLException {
 		logger.info("Getting loyalty level for "+owner);
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
-		portfolio = em.merge(portfolio);
+		portfolioDAO.updatePortfolio(portfolio);
 		String loyalty = portfolio.getLoyalty();
 	
 		double commission = getCommission(loyalty);

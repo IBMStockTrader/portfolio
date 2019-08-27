@@ -1,5 +1,5 @@
 /*
-       Copyright 2017 IBM Corp All Rights Reserved
+       Copyright 2017-2019 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 import javax.persistence.Id;
+import javax.persistence.IdClass;
 import javax.persistence.JoinColumn;
 import javax.persistence.NamedQuery;
-
 import javax.persistence.Column;
 import javax.persistence.ManyToOne;
 
@@ -40,6 +40,8 @@ public class Stock {
     private double commission;
     private double price;
     private double total;
+
+    @Column(name="dateQuoted")
     private String date;
 
     @Id

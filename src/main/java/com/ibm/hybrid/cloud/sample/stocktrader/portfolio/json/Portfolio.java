@@ -1,5 +1,5 @@
 /*
-       Copyright 2017 IBM Corp All Rights Reserved
+       Copyright 2017-2019 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -23,11 +23,16 @@ import javax.persistence.Entity;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.Id;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.json.JsonObject;
+import javax.json.bind.annotation.JsonbTransient;
 
-import org.eclipse.persistence.annotations.CascadeOnDelete;
+import javax.json.Json;
+import javax.json.JsonObjectBuilder;
+import java.util.Iterator;
 
 @Entity
 @Table
@@ -47,10 +52,12 @@ public class Portfolio {
     private String sentiment;
     @Transient
     private double nextCommission;
+    @Transient
+    JsonObject stocks;
 
-    @OneToMany(mappedBy = "portfolio")
-    @CascadeOnDelete
-    private List<Stock> stocks = new ArrayList<Stock>();
+    @JsonbTransient
+    @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL)
+    private List<Stock> stockList = new ArrayList<Stock>();
 
     public Portfolio() { //default constructor
     }
@@ -135,17 +142,44 @@ public class Portfolio {
         nextCommission = newNextCommission;
     }
 
-    public List<Stock> getStocks() {
-        return stocks;
-    }
-
-    public void setStocks(List<Stock> newStocks) {
+    public void setStocks(JsonObject newStocks) {
         stocks = newStocks;
+    }
+    
+    public JsonObject getStocks() {
+        return stocks;
     }
 
     public void addStock(Stock newStock) {
         if (newStock != null) {
-            stocks.add(newStock);
+            String symbol = newStock.getSymbol();
+            if (symbol != null) {
+                JsonObjectBuilder stocksBuilder = Json.createObjectBuilder();
+            
+                if (stocks != null) { //JsonObject is immutable, so copy current "stocks" into new builder
+                    Iterator<String> iter = stocks.keySet().iterator();
+                    while (iter.hasNext()) {
+                        String key = iter.next();
+                        JsonObject obj = stocks.getJsonObject(key);
+                        stocksBuilder.add(key, obj);
+                    }
+                }
+
+                //can only add a JSON-P object to a JSON-P object; can't add a JSON-B object.  So converting...
+                JsonObjectBuilder builder = Json.createObjectBuilder();
+
+                builder.add("symbol", symbol);
+                builder.add("shares", newStock.getShares());
+                builder.add("commission", newStock.getCommission());
+                builder.add("price", newStock.getPrice());
+                builder.add("total", newStock.getTotal());
+                builder.add("date", newStock.getDate());
+
+                JsonObject stock = builder.build();
+
+                stocksBuilder.add(symbol, stock); //might be replacing an item; caller needs to do any merge (like updatePortfolio does)
+                stocks = stocksBuilder.build();
+            }
         }
     }
 
