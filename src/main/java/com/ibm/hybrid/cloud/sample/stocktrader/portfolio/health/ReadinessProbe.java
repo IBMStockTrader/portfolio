@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-package com.ibm.hybrid.cloud.sample.stocktrader.trader.health;
+package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.health;
 
 //Standard I/O classes
 import java.io.PrintWriter;
