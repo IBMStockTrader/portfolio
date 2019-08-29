@@ -196,7 +196,7 @@ spec:
         readinessProbe:
           httpGet:
 #            path: /portfolio/health/readiness
-            path: /health
+            path: /health/ready
             port: 9080
           initialDelaySeconds: 60
           periodSeconds: 15
@@ -205,7 +205,7 @@ spec:
         livenessProbe:
           httpGet:
 #            path: /portfolio/health/liveness
-            path: /health
+            path: /health/live
             port: 9080
           initialDelaySeconds: 90
           periodSeconds: 15
