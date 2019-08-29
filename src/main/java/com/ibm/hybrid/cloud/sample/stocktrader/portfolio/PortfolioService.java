@@ -37,25 +37,25 @@ import java.util.logging.Logger;
 import java.sql.SQLException;
 import javax.sql.DataSource;
 
-//CDI 1.2
+//CDI 2.0
 import javax.inject.Inject;
 import javax.enterprise.context.RequestScoped;
 
-//mpConfig 1.2
+//mpConfig 1.3
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-//mpHealth stuff moved to MPHealthProbes.java
+//mpHealth stuff moved to health subpackage
 
 //mpJWT 1.1
 import org.eclipse.microprofile.auth.LoginConfig;
 
-//mpMetrics 1.1
+//mpMetrics 2.0
 import org.eclipse.microprofile.metrics.annotation.Counted;
 
-//mpOpenTracing 1.0
+//mpOpenTracing 1.3
 import org.eclipse.microprofile.opentracing.Traced;
 
-//mpRestClient 1.0
+//mpRestClient 1.3
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 //Transactions
@@ -73,7 +73,7 @@ import javax.jms.QueueSession;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-//JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
+//JSON-P 1.1 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
 import javax.json.JsonObject;
 
 //JNDI 1.0
@@ -83,7 +83,7 @@ import javax.naming.NamingException;
 //Servlet 4.0
 import javax.servlet.http.HttpServletRequest;
 
-//JAX-RS 2.0 (JSR 339)
+//JAX-RS 2.1 (JSR 339)
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
