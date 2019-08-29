@@ -14,7 +14,9 @@
    limitations under the License.
  */
 
-package com.ibm.hybrid.cloud.sample.stocktrader.portfolio;
+package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.health;
+
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.PortfolioService;
 
 //Standard I/O classes
 import java.io.PrintWriter;
@@ -28,19 +30,16 @@ import java.util.logging.Logger;
 import javax.enterprise.context.ApplicationScoped;
 
 //mpHealth 1.0
-import org.eclipse.microprofile.health.Health;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
+import org.eclipse.microprofile.health.Liveness;
 
 
-@Health
+@Liveness
 @ApplicationScoped
-/** Use mpHealth for liveness probe.  Note that mpHealth-1.0 doesn't support a readiness probe;
- *  supposedly that is coming in mpHealth-2.0 (whose spec is still evolving).
-*/
-public class MPHealthProbes implements HealthCheck {
-	private static Logger logger = Logger.getLogger(MPHealthProbes.class.getName());
+public class Liveness implements HealthCheck {
+	private static Logger logger = Logger.getLogger(Liveness.class.getName());
 
 
 	//mpHealth probe
