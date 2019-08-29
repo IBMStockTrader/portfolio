@@ -47,7 +47,7 @@ public class ReadinessProbe implements HealthCheck {
 		HealthCheckResponse response = null;
 		String message = "Ready";
 		try {
-			HealthCheckResponseBuilder builder = HealthCheckResponse.named("Trader");
+			HealthCheckResponseBuilder builder = HealthCheckResponse.named("Portfolio");
 
 			if ((jwtAudience==null) || (jwtIssuer==null)) { //can't run without these env vars
 				builder = builder.down();
