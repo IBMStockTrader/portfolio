@@ -128,7 +128,7 @@ public class PortfolioService extends Application {
 
 	private static boolean initialized = false;
 	private static boolean staticInitialized = false;
-	static short consecutiveErrors = 0; //used in health check
+	public  static short   consecutiveErrors = 0; //used in health check
 
 	private static Queue queue = null;
 	private static QueueConnectionFactory queueCF = null;
@@ -244,7 +244,7 @@ public class PortfolioService extends Application {
 	@POST
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
-	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
+	@Counted(name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader application")
 	@Transactional
 	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
