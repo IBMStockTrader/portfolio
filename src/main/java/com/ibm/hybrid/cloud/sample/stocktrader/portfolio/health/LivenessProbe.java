@@ -38,8 +38,8 @@ import org.eclipse.microprofile.health.Liveness;
 
 @Liveness
 @ApplicationScoped
-public class Liveness implements HealthCheck {
-	private static Logger logger = Logger.getLogger(Liveness.class.getName());
+public class LivenessProbe implements HealthCheck {
+	private static Logger logger = Logger.getLogger(LivenessProbe.class.getName());
 
 
 	//mpHealth probe
