@@ -1,5 +1,5 @@
 /*
-       Copyright 2017 IBM Corp All Rights Reserved
+       Copyright 2017-2019 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,27 +16,49 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Iterator;
-import java.util.Set;
+
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import javax.persistence.Id;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.NamedQuery;
+import javax.persistence.OneToMany;
+import javax.json.JsonObject;
+import javax.json.bind.annotation.JsonbTransient;
 
 //JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
 import javax.json.Json;
-import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 
-
+@Entity
+@Table
+@NamedQuery(name = "Portfolio.findAll", query = "SELECT p FROM Portfolio p")
 /** JSON-B POJO class representing a Portfolio JSON object */
 public class Portfolio {
+
+    @Id
+    @Column(nullable = false, length = 32)
     private String owner;
     private double total;
+    @Column(length = 8)
     private String loyalty;
     private double balance;
     private double commissions;
     private int free;
     private String sentiment;
+    @Transient
     private double nextCommission;
-    private JsonObject stocks;
+    @Transient
+    JsonObject stocks;
 
+    @JsonbTransient
+    @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL)
+    private List<Stock> stockList = new ArrayList<Stock>();
 
     public Portfolio() { //default constructor
     }
@@ -128,7 +150,7 @@ public class Portfolio {
     public void setStocks(JsonObject newStocks) {
         stocks = newStocks;
     }
-
+   
     public void addStock(Stock newStock) {
         if (newStock != null) {
             String symbol = newStock.getSymbol();

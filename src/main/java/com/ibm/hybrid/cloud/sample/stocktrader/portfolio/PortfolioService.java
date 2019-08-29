@@ -18,26 +18,23 @@ package com.ibm.hybrid.cloud.sample.stocktrader.portfolio;
 
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client.*;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.*;
+import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.dao.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.List;
 
 //Logging (JSR 47)
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 //JDBC 4.0 (JSR 221)
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import java.sql.Statement;
 import javax.sql.DataSource;
 
 //CDI 1.2
@@ -77,10 +74,7 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 
 //JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.Json;
-import javax.json.JsonArray;
 import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
 
 //JNDI 1.0
 import javax.naming.InitialContext;
@@ -106,7 +100,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.WebApplicationException;
-
 
 @ApplicationPath("/")
 @Path("/")
@@ -146,6 +139,12 @@ public class PortfolioService extends Application {
 	private static SimpleDateFormat timestampFormatter = null;
 
 	private static EventStreamsProducer kafkaProducer = null;
+
+	@Inject
+	private PortfolioDao portfolioDAO;
+
+	@Inject
+	private StockDao stockDAO;
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 	private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
@@ -215,30 +214,13 @@ public class PortfolioService extends Application {
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Transactional
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio[] getPortfolios() throws SQLException {
-		ArrayList<Portfolio> portfolioList = new ArrayList<Portfolio>();
-		int count = 0;
 
-		try {
-			logger.fine("Running following SQL: SELECT * FROM Portfolio");
-			ResultSet results = invokeJDBCWithResults("SELECT * FROM Portfolio");
-	
-			logger.fine("Iterating over results");
-			while (results.next()) {
-				Portfolio portfolio = new Portfolio();
-				portfolio.setOwner(results.getString("owner"));
-				portfolio.setTotal(results.getDouble("total"));
-				portfolio.setLoyalty(results.getString("loyalty"));
-
-				portfolioList.add(portfolio);
-				count++;
-			}
-			releaseResults(results);
-		} catch (SQLException sqle) {
-			logException(sqle);
-			throw sqle;
-		}
+		logger.fine("Running following SQL: SELECT * FROM Portfolio");
+		List<Portfolio> portfolioList = portfolioDAO.readAllPortfolios();
+		int count = portfolioList.size();
 	
 		logger.info("Returning "+count+" portfolios");
 
@@ -263,7 +245,8 @@ public class PortfolioService extends Application {
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Counted(monotonic=true, name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader applications")
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+	@Transactional
+	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
 		Portfolio portfolio = null;
 		if (owner != null) {
@@ -279,13 +262,14 @@ public class PortfolioService extends Application {
 			portfolio = new Portfolio(owner, 0.0, "Basic", 50.0, 0.0, 0, "Unknown", 9.99);
 
 			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
-			try {
-				invokeJDBC("INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
-			} catch (SQLIntegrityConstraintViolationException dupKey) {
+			
+			if(portfolioDAO.readEvent(owner) == null) {
+				portfolioDAO.createPortfolio(portfolio);
+			} else {
 				logger.warning("Portfolio already exists for: "+owner);
-				logException(dupKey);
-				throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);
+				throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);			
 			}
+
 			logger.info("Portfolio created successfully");
 			consecutiveErrors = 0;
 		}
@@ -299,33 +283,21 @@ public class PortfolioService extends Application {
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-		Portfolio newPortfolio = null;
-
-		Portfolio oldPortfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
-		if (oldPortfolio != null) {
-			String oldLoyalty = oldPortfolio.getLoyalty();
+		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		if (portfolio != null) {
+			String oldLoyalty = portfolio.getLoyalty();
 			double overallTotal = 0;
 
-			Portfolio portfolio = new Portfolio(owner);
-
-			ArrayList<Stock> stocks = new ArrayList<Stock>();
-
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
-			ResultSet results = invokeJDBCWithResults("SELECT * FROM Stock WHERE owner = '"+owner+"'");
+			List<Stock> results = stockDAO.readStockByOwner(owner);
 
 			int count = 0;
 			logger.fine("Iterating over results");
-			while (results.next()) {
+			for (Stock stock : results) {
 				count++;
 
-				String symbol = results.getString("symbol");
-				Stock stock = new Stock(symbol);
-
-				int shares = results.getInt("shares");
-				stock.setShares(shares);
-
-				double commission = results.getDouble("commission");
-				stock.setCommission(commission);
+				String symbol = stock.getSymbol();
+				int shares = stock.getShares();
 
 				String date = null;
 				double price = 0;
@@ -341,23 +313,29 @@ public class PortfolioService extends Application {
 					price = quote.getPrice();
 
 					total = shares * price;
-
+					
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
-					logger.fine("Running following SQL: UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-					invokeJDBC("UPDATE Stock SET dateQuoted = '"+date+"', price = "+price+", total = "+total+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
 					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
+					stock.setDate(date);
+					stock.setPrice(price);
+					stock.setTotal(total);
+					stock.setPortfolio(portfolio);
+
+					stockDAO.updateStock(stock);
+					stockDAO.detachStock(stock);
+
 				} catch (Throwable t) {
 					logger.warning("Unable to get fresh stock quote.  Using cached values instead");
 					logException(t);
 
-					date = results.getString("dateQuoted");
+					date = stock.getDate();
 					if (date == null) {
 						Date now = new Date();
 						if (dateFormatter == null) dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
 						date = dateFormatter.format(now);
 					}
 
-					price = results.getDouble("price");
+					price = stock.getPrice();
 					if (price == 0) { //SQL returns 0 for a double if the column was null
 						price = ERROR;
 						total = ERROR;
@@ -378,56 +356,34 @@ public class PortfolioService extends Application {
 			}
 			logger.info("Processed "+count+" stocks for "+owner);
 
-			releaseResults(results);
-
 			portfolio.setTotal(overallTotal);
 
 			String loyalty = processLoyaltyLevel(owner, overallTotal, oldLoyalty, request);
 			portfolio.setLoyalty(loyalty);
 
-			int free = oldPortfolio.getFree();
-			portfolio.setBalance(oldPortfolio.getBalance());
-			portfolio.setCommissions(oldPortfolio.getCommissions());
+			int free = portfolio.getFree();
 			portfolio.setFree(free);
-			portfolio.setSentiment(oldPortfolio.getSentiment());
 			portfolio.setNextCommission(free>0 ? 0.0 : getCommission(loyalty));
 
-			logger.fine("Running following SQL: UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
-			invokeJDBC("UPDATE Portfolio SET total = "+overallTotal+", loyalty = '"+loyalty+"' WHERE owner = '"+owner+"'");
+			portfolioDAO.updatePortfolio(portfolio);
 
 			logger.info("Returning "+portfolio.toString());
-			newPortfolio = portfolio;
 		} else {
-			newPortfolio = new Portfolio(); //so we don't return null
+			portfolio = new Portfolio(); //so we don't return null
 			logger.warning("No portfolio found for "+owner); //shouldn't get here; an exception with a 404 should be thrown instead
 		}
 
-		return newPortfolio;
+		return portfolio;
 	}
 
 	private Portfolio getPortfolioWithoutStocks(String owner) throws SQLException {
 		logger.fine("Running following SQL: SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
-		ResultSet results = invokeJDBCWithResults("SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
 
-		Portfolio portfolio = null;
-		if (results.next()) {
+		Portfolio portfolio = portfolioDAO.readEvent(owner);
+
+		if (portfolio != null) {
 			logger.info("Found portfolio for "+owner);
-
-			double total = results.getDouble("total");
-			String loyalty = results.getString("loyalty");
-			double balance = results.getDouble("balance");
-			double commissions = results.getDouble("commissions");
-			int free = results.getInt("free");
-			String sentiment = results.getString("sentiment");
-
-			releaseResults(results);
-
-			double nextCommission = getCommission(loyalty);
-
-			portfolio = new Portfolio(owner, total, loyalty, balance, commissions, free, sentiment, nextCommission);
 		} else {
-			releaseResults(results);
-
 			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
 		}
 
@@ -437,10 +393,9 @@ public class PortfolioService extends Application {
     
     @GET
     @Path("/{owner}/returns")
-    @Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
     public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-        Double portfolioValue = getPortfolio(owner, request).getTotal();
-        
+		Double portfolioValue = getPortfolio(owner, request).getTotal();
         String jwt = request.getHeader("Authorization");
         return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
     }
@@ -453,33 +408,46 @@ public class PortfolioService extends Application {
 	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
 		double commission = processCommission(owner); //throws a 404 if not found
 
-		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
-		ResultSet results = invokeJDBCWithResults("SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+		Stock stock = new Stock();
+		stock.setCommission(commission);
+		stock.setSymbol(symbol);
+		stock.setShares(shares);
 
-		if (results.next()) { //row exists
-			int oldShares = results.getInt("shares");
-			double oldCommission = results.getDouble("commission");
-			releaseResults(results);
+		Portfolio portfolio = portfolioDAO.readEvent(owner);
+		if(portfolio != null) {
+			stock.setPortfolio(portfolio);
+		} else {
+			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
+		}
+        
+		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+		List<Stock> results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
+
+		if (!results.isEmpty()) { //row exists
+			stock = results.get(0);
+			int oldShares = stock.getShares();
+			double oldCommission = stock.getCommission();
 
 			int newShares = oldShares+shares;
 			double newCommission = oldCommission+commission;
 			if (newShares > 0) {
 				logger.fine("Running following SQL: UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				invokeJDBC("UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+				stock.setShares(newShares);
+				stock.setCommission(newCommission);
 				//getPortfolio will fill in the price, date and total
 			} else {
 				logger.fine("Running following SQL: DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				invokeJDBC("DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+				stockDAO.deleteStock(stock);
 			}
 		} else {
 			logger.fine("Running following SQL: INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
-			invokeJDBC("INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
+			stockDAO.createStock(stock);
 			//getPortfolio will fill in the price, date and total
 		}
 
 		//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
 		logger.info("Refreshing portfolio for "+owner);
-		Portfolio portfolio = getPortfolio(owner, request);
+		portfolio = getPortfolio(owner, request);
 
 		invokeKafka(portfolio, symbol, shares, commission);
 
@@ -489,12 +457,13 @@ public class PortfolioService extends Application {
 	@DELETE
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Transactional
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
 
 		logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
-		invokeJDBC("DELETE FROM Portfolio WHERE owner = '"+owner+"'");
+		portfolioDAO.deletePortfolio(portfolio);
 		logger.info("Successfully deleted portfolio for "+owner);
 
 		return portfolio; //maybe this method should return void instead?
@@ -504,6 +473,7 @@ public class PortfolioService extends Application {
 	@Path("/{owner}/feedback")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Transactional
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
 		String sentiment = "Unknown";
@@ -514,6 +484,7 @@ public class PortfolioService extends Application {
 		}
 
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		portfolioDAO.updatePortfolio(portfolio);
 		int freeTrades = portfolio.getFree();
 
 		try {
@@ -532,8 +503,8 @@ public class PortfolioService extends Application {
 		Feedback feedback = getFeedback(owner, sentiment);
 		freeTrades += feedback.getFree();
 
-		logger.fine("Running following JDBC command: UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
-		invokeJDBC("UPDATE Portfolio SET sentiment='"+sentiment+"', free="+freeTrades+" WHERE owner='"+owner+"'");
+		portfolio.setFree(freeTrades);
+		portfolio.setSentiment(sentiment);
 
 		logger.info("Returning feedback: "+feedback.toString());
 		return feedback;
@@ -649,72 +620,6 @@ public class PortfolioService extends Application {
 		initialized = true;
 	}
 
-	@Traced
-	private void invokeJDBC(String command) throws SQLException {
-		try {
-			initialize();
-		} catch (NamingException ne) {
-			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
-		}
-
-		try {
-			logger.fine("Running SQL executeUpdate command: "+command);
-			Connection connection = datasource.getConnection();
-			Statement statement = connection.createStatement();
-	
-			statement.executeUpdate(command);
-	
-			statement.close();
-			connection.close();
-	
-			logger.info("SQL executeUpdate command completed successfully");
-		} catch (SQLException sqle) {
-			logException(sqle);
-			throw sqle;
-		}
-	}
-
-	@Traced
-	private ResultSet invokeJDBCWithResults(String command) throws SQLException {
-		ResultSet results = null;
-
-		try {
-			initialize();
-		} catch (NamingException ne) {
-			if (datasource == null) throw new SQLException("Can't get datasource from JNDI lookup!", ne);
-		}
-
-		try {
-			logger.fine("Running SQL executeQuery command: "+command);
-			Connection connection = datasource.getConnection();
-			Statement statement = connection.createStatement();
-	
-			statement.executeQuery(command);
-	
-			results = statement.getResultSet();
-			logger.info("SQL executeQuery command completed successfully - returning results");
-		} catch (SQLException sqle) {
-			logException(sqle);
-			throw sqle;
-		}
-	
-		return results; //caller needs to pass this to releaseResults when done
-	}
-
-	@Traced
-	private void releaseResults(ResultSet results) throws SQLException {
-		logger.info("Releasing JDBC resources");
-
-		Statement statement = results.getStatement();
-		Connection connection = statement.getConnection();
-
-		results.close();
-		statement.close();
-		connection.close();
-
-		logger.info("Released JDBC resources");
-	}
-
 	/** Send a JSON message to our notification queue. */
 	@Traced
 	private void invokeJMS(Object json) throws JMSException, NamingException {
@@ -760,7 +665,8 @@ public class PortfolioService extends Application {
 	
 			double price = -1;
 			String owner = portfolio.getOwner();
-			JsonObject stock = portfolio.getStocks().getJsonObject(symbol);
+			JsonObject stock = portfolio.getStocks();
+
 			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
 				price = stock.getJsonNumber("price").doubleValue();
 			} else {
@@ -783,6 +689,7 @@ public class PortfolioService extends Application {
 	private double processCommission(String owner) throws SQLException {
 		logger.info("Getting loyalty level for "+owner);
 		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		portfolioDAO.updatePortfolio(portfolio);
 		String loyalty = portfolio.getLoyalty();
 	
 		double commission = getCommission(loyalty);
@@ -793,7 +700,7 @@ public class PortfolioService extends Application {
 			commission = 0.0;
 
 			logger.info("Using free trade for "+owner);
-			invokeJDBC("UPDATE Portfolio SET free = "+free+" WHERE owner = '"+owner+"'");
+			portfolio.setFree(free);
 		} else {
 			double commissions = portfolio.getCommissions();
 			commissions += commission;
@@ -802,7 +709,8 @@ public class PortfolioService extends Application {
 			balance -= commission;
 
 			logger.info("Charging commission of $"+commission+" for "+owner);
-			invokeJDBC("UPDATE Portfolio SET commissions = "+commissions+", balance = "+balance+" WHERE owner = '"+owner+"'");
+			portfolio.setCommissions(commissions);
+			portfolio.setBalance(balance);
 		}
 
 		logger.info("Returning a commission of $"+commission);
