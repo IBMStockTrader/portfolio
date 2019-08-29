@@ -105,8 +105,7 @@ import javax.ws.rs.WebApplicationException;
 @Path("/")
 @LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
 @RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
-/** This version stores the Portfolios via JDBC to DB2 (or whatever JDBC provider is defined in your server.xml).
- *  TODO: Should update to use PreparedStatements.
+/** This version stores the Portfolios via JPA to DB2 (or whatever JDBC provider is defined in your server.xml).
  */
 public class PortfolioService extends Application {
 	private static Logger logger = Logger.getLogger(PortfolioService.class.getName());
@@ -389,16 +388,16 @@ public class PortfolioService extends Application {
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
 		return portfolio;
-    }
+	}
     
-    @GET
-    @Path("/{owner}/returns")
+	@GET
+	@Path("/{owner}/returns")
 	@Produces(MediaType.TEXT_PLAIN)
-    public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
+	public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		Double portfolioValue = getPortfolio(owner, request).getTotal();
-        String jwt = request.getHeader("Authorization");
-        return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
-    }
+		String jwt = request.getHeader("Authorization");
+		return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
+	}
 
 	@PUT
 	@Path("/{owner}")
@@ -414,7 +413,7 @@ public class PortfolioService extends Application {
 		stock.setShares(shares);
 
 		Portfolio portfolio = portfolioDAO.readEvent(owner);
-		if(portfolio != null) {
+		if (portfolio != null) {
 			stock.setPortfolio(portfolio);
 		} else {
 			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
