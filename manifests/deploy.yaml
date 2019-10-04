@@ -195,7 +195,6 @@ spec:
         imagePullPolicy: Always
         readinessProbe:
           httpGet:
-#            path: /portfolio/health/readiness
             path: /health/ready
             port: 9080
           initialDelaySeconds: 60
@@ -204,7 +203,6 @@ spec:
           failureThreshold: 3
         livenessProbe:
           httpGet:
-#            path: /portfolio/health/liveness
             path: /health/live
             port: 9080
           initialDelaySeconds: 90
@@ -252,6 +250,9 @@ metadata:
   labels:
     app: portfolio
     solution: stock-trader
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9080"
 spec:
   type: NodePort
   ports:
