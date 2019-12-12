@@ -393,10 +393,19 @@ public class PortfolioService extends Application {
 	@GET
 	@Path("/{owner}/returns")
 	@Produces(MediaType.TEXT_PLAIN)
+	@Transactional
 	public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		Double portfolioValue = getPortfolio(owner, request).getTotal();
+		
 		String jwt = request.getHeader("Authorization");
-		return tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
+		String result = "Unknown";
+		try {
+			result = tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
+		} catch (Throwable t) {
+			logger.info("Unable to invoke TradeHistory.  This is an optional microservice and the following exception is expected if it is not deployed");
+			logException(t);
+		}
+		return result;
 	}
 
 	@PUT
