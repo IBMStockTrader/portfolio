@@ -27,17 +27,19 @@
 <!--    <feature>logstashCollector-1.0</feature> -->
     </featureManager>
 
+    <variable name="AUTH_TYPE" defaultValue="nativejwt"/>
+
     <logging traceSpecification="*=info" consoleLogLevel="INFO" />
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
-    
+
     <keyStore id="defaultKeyStore" location="${server.config.dir}/resources/security/key.jks" password="passw0rd"/>
 
     <sslDefault sslRef="RpSSLConfig" />
 
     <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" />
 
-    <mpJwt id="myMpJwt" audiences="${env.JWT_AUDIENCE}" issuer="${env.JWT_ISSUER}" keyName="default" ignoreApplicationAuthMethod="false"/>
+    <include optional="false" location="includes/${env.AUTH_TYPE}.xml"/>
 
     <mpMetrics authentication="false"/>
 
@@ -61,9 +63,9 @@
     <resourceAdapter id="mq" location="/config/wmq.jmsra.rar"/>
 
     <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory" containerAuthDataRef="MQ-Credentials">
-        <properties.mq 
+        <properties.mq
             transportType="CLIENT"
-            hostName="${env.MQ_HOST}" 
+            hostName="${env.MQ_HOST}"
             port="${env.MQ_PORT}"
             channel="${env.MQ_CHANNEL}"
             queueManager="${env.MQ_QUEUE_MANAGER}"/>
