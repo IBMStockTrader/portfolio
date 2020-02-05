@@ -32,7 +32,7 @@ spec:
           - "portfolio"
         from:
           kind: "ImageStreamTag"
-          name: "stocktrader-portfolio:latest"
+          name: "portfolio:latest"
   template:
     metadata:
       labels:
@@ -46,7 +46,7 @@ spec:
 #       image: portfolio:latest # Microservice Builder
 #       image: mycluster.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
 #       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Kubernetes Service
-        image: image-registry.openshift-image-registry.svc:5000/stock-trader/stocktrader-portfolio:latest # Docker Hub
+        image: image-registry.openshift-image-registry.svc:5000/stock-trader/portfolio:latest # Docker Hub
         env:
           - name: JDBC_HOST
             valueFrom:
