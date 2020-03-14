@@ -1,5 +1,5 @@
 <!--
-       Copyright 2017-2019 IBM Corp All Rights Reserved
+       Copyright 2017-2020 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@
 
     <sslDefault sslRef="RpSSLConfig" />
 
-    <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" />
+    <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" trustDefaultCerts="true" />
 
     <include optional="false" location="includes/${env.AUTH_TYPE}.xml"/>
 
