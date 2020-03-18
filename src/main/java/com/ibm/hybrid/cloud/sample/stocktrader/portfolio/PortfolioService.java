@@ -656,6 +656,7 @@ public class PortfolioService extends Application {
 	}
 
 	/** Send a message to IBM Event Streams via the Kafka APIs */
+	/*  TODO: Replace this with mpReactiveMessaging */
 	private void invokeKafka(Portfolio portfolio, String symbol, int shares, double commission) {
 		if ((kafkaAddress == null) || kafkaAddress.isEmpty()) {
 			logger.info("IBM Event Streams not configured, so not sending Kafka message about this stock trade");
@@ -670,10 +671,11 @@ public class PortfolioService extends Application {
 			Date now = new Date();
 			if (timestampFormatter == null) timestampFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
 			String when = timestampFormatter.format(now);
-	
+
 			double price = -1;
 			String owner = portfolio.getOwner();
-			JsonObject stock = portfolio.getStocks();
+			JsonObject stocks = portfolio.getStocks();
+			JsonObject stock = (stocks!=null) ? stocks.getJsonObject(symbol) : null;
 
 			if (stock != null) { //rather than calling stock-quote again, get it from the portfolio we just built
 				price = stock.getJsonNumber("price").doubleValue();
@@ -681,11 +683,11 @@ public class PortfolioService extends Application {
 				logger.warning("Unable to get the stock price.  Skipping sending the StockPurchase to Kafka");
 				return; //nothing to send if we can't look up the stock price
 			}
-	
+
 			String tradeID = UUID.randomUUID().toString();
 			StockPurchase purchase = new StockPurchase(tradeID, owner, symbol, shares, price, when, commission);
 			String message = purchase.toString();
-	
+
 			kafkaProducer.produce(message); //publish the serialized JSON to our Kafka topic in IBM Event Streams
 			logger.info("Delivered message to Kafka: "+message);
 		} catch (Throwable t) {
