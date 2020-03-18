@@ -1,5 +1,5 @@
 /*
-       Copyright 2017-2019 IBM Corp All Rights Reserved
+       Copyright 2017-2020 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -250,7 +250,7 @@ public class PortfolioService extends Application {
 		Portfolio portfolio = null;
 		if (owner != null) {
 			if (owner.equalsIgnoreCase(FAIL)) {
-				logger.warning("Throwing a 400 error for onwer: "+owner);
+				logger.warning("Throwing a 400 error for owner: "+owner);
 				consecutiveErrors++;
 				throw new BadRequestException("Invalid value for portfolio owner: "+owner);
 			}
@@ -282,7 +282,7 @@ public class PortfolioService extends Application {
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
 		if (portfolio != null) {
 			String oldLoyalty = portfolio.getLoyalty();
 			double overallTotal = 0;
@@ -375,7 +375,7 @@ public class PortfolioService extends Application {
 		return portfolio;
 	}
 
-	private Portfolio getPortfolioWithoutStocks(String owner) throws SQLException {
+	private Portfolio getPortfolioWithoutStocks(String owner, boolean throw404) throws SQLException {
 		logger.fine("Running following SQL: SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
 
 		Portfolio portfolio = portfolioDAO.readEvent(owner);
@@ -383,7 +383,11 @@ public class PortfolioService extends Application {
 		if (portfolio != null) {
 			logger.info("Found portfolio for "+owner);
 		} else {
-			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
+			if (throw404) {
+				throw new NotFoundException("No such portfolio: "+owner); //send back a 404
+			} else {
+				logger.info("No such portfolio: "+owner);
+			}
 		}
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
@@ -468,7 +472,7 @@ public class PortfolioService extends Application {
 	@Transactional
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
-		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		Portfolio portfolio = getPortfolioWithoutStocks(owner, false); //do NOT throw a 404 if not found
 
 		logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
 		portfolioDAO.deletePortfolio(portfolio);
@@ -491,7 +495,7 @@ public class PortfolioService extends Application {
 			logger.warning("Error occurred during initialization");
 		}
 
-		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
 		portfolioDAO.updatePortfolio(portfolio);
 		int freeTrades = portfolio.getFree();
 
@@ -698,7 +702,7 @@ public class PortfolioService extends Application {
 
 	private double processCommission(String owner) throws SQLException {
 		logger.info("Getting loyalty level for "+owner);
-		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
 		portfolioDAO.updatePortfolio(portfolio);
 		String loyalty = portfolio.getLoyalty();
 	
