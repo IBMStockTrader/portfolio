@@ -1,5 +1,5 @@
 /*
-       Copyright 2019 IBM Corp All Rights Reserved
+       Copyright 2019-2020 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -31,8 +31,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 @Path("/")
 @Dependent
 @RegisterRestClient
-/** mpRestClient "remote" interface for the stock quote microservice */
-// TODO: Add JWT header (https://github.com/IBMStockTrader/trade-history/issues/38)
+/** mpRestClient "remote" interface for the trade history microservice */
 public interface TradeHistoryClient {
     @GET
     @Path("/returns/{owner}")
