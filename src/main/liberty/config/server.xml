@@ -16,7 +16,7 @@
 
 <server description="Portfolio server">
     <featureManager>
-        <feature>microProfile-3.2</feature>
+        <feature>microProfile-3.3</feature>
         <feature>jdbc-4.2</feature>
         <feature>jms-2.0</feature>
         <feature>jca-1.7</feature>
@@ -39,7 +39,7 @@
 
     <ssl id="RpSSLConfig" keyStoreRef="defaultKeyStore" trustDefaultCerts="true" />
 
-    <include optional="false" location="includes/${env.AUTH_TYPE}.xml"/>
+    <include optional="false" location="includes/${AUTH_TYPE}.xml"/>
 
     <mpMetrics authentication="false"/>
 
