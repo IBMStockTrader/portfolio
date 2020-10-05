@@ -32,6 +32,8 @@ ARG extract_keycloak_cert
 USER root
 COPY src/main/liberty/config /opt/ol/wlp/usr/servers/defaultServer/
 COPY --from=build /usr/target/portfolio-1.0-SNAPSHOT.war /opt/ol/wlp/usr/servers/defaultServer/apps/Portfolio.war
+COPY --from=build /usr/target/prereqs/jcc-11.5.4.0.jar /opt/ol/wlp/usr/servers/defaultServer/db2jcc4.jar
+COPY --from=build /usr/target/prereqs/wmq.jmsra-9.2.0.1.rar /opt/ol/wlp/usr/servers/defaultServer/wmq.jmsra.rar  
 COPY --from=cert-extractor /keycloak.pem /tmp/keycloak.pem
 RUN chown -R 1001:0 config/
 USER 1001
