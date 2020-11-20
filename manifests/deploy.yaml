@@ -1,4 +1,4 @@
-#       Copyright 2017 IBM Corp All Rights Reserved
+#       Copyright 2017-2019 IBM Corp All Rights Reserved
 
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -17,20 +17,26 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: portfolio
+  labels:
+    app: stock-trader
+  annotations:
+    prism.subkind: Liberty
 spec:
   replicas: 1
   template:
     metadata:
       labels:
         app: portfolio
-        solution: stock-trader
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: "9080"
     spec:
       containers:
       - name: portfolio
-        image: portfolio:latest # Microservice Builder
+#       image: portfolio:latest # Microservice Builder
 #       image: mycluster.icp:8500/stock-trader/portfolio:latest # IBM Cloud Private
-#       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Container Service
-#       image: ibmstocktrader/portfolio:latest # Docker Hub
+#       image: registry.ng.bluemix.net/stock_trader/portfolio:latest # IBM Kubernetes Service
+        image: ibmstocktrader/portfolio:latest # Docker Hub
         env:
           - name: JDBC_HOST
             valueFrom:
@@ -102,6 +108,7 @@ spec:
               secretKeyRef:
                 name: watson
                 key: id
+                optional: true
           - name: WATSON_PWD
             valueFrom:
               secretKeyRef:
@@ -112,6 +119,50 @@ spec:
               secretKeyRef:
                 name: odm
                 key: url
+                optional: true
+          - name: ODM_ID
+            valueFrom:
+              secretKeyRef:
+                name: odm
+                key: id
+                optional: true
+          - name: ODM_PWD
+            valueFrom:
+              secretKeyRef:
+                name: odm
+                key: pwd
+                optional: true
+          - name: KAFKA_TOPIC
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: topic
+                optional: true
+          - name: KAFKA_ADDRESS
+            valueFrom:
+              secretKeyRef:
+               name: kafka
+               key: address
+               optional: true
+          - name: KAFKA_USER
+            valueFrom:
+             secretKeyRef:
+               name: kafka
+               key: user
+               optional: true
+          - name: KAFKA_API_KEY
+            valueFrom:
+             secretKeyRef:
+                name: kafka
+                key: api-key
+                optional: true
+          # location of the keystore.  See below comments about volumeMount
+          - name: KAFKA_KEYSTORE
+            valueFrom:
+              secretKeyRef:
+                name: kafka
+                key: keystore
+                optional: true
           - name: JWT_AUDIENCE
             valueFrom:
               secretKeyRef:
@@ -122,10 +173,74 @@ spec:
               secretKeyRef:
                 name: jwt
                 key: issuer
+          - name: STOCK_QUOTE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: urls
+                key: stock-quote
+                optional: true
+          - name: TRADE_HISTORY_URL
+            valueFrom:
+              configMapKeyRef:
+               name: urls
+               key: trade-history
+               optional: true
+          - name: WLP_LOGGING_CONSOLE_FORMAT
+            value: json
+          - name: WLP_LOGGING_CONSOLE_SOURCE
+            value: message,ffdc
         ports:
           - containerPort: 9080
           - containerPort: 9443
         imagePullPolicy: Always
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 9080
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 9080
+          initialDelaySeconds: 90
+          periodSeconds: 15
+          successThreshold: 1
+          failureThreshold: 5 # Allow a little time to exec into the pod to grab FFDCs before it's killed
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+      #  Uncomment the following lines to get the keystore from the secret
+#        volumeMounts:
+#        - mountPath: /keystores
+#          name: kafka-keystore-volume
+#          readOnly: true
+#      volumes:
+#      - name: kafka-keystore-volume
+#        secret:
+#         secretName: kafka-keystore
+---
+#Deploy the autoscaler
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: portfolio-hpa
+  labels:
+    solution: stock-trader
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: portfolio
+  maxReplicas: 10
+  minReplicas: 2
+  targetCPUUtilizationPercentage: 60
 ---
 #Deploy the service
 apiVersion: v1
@@ -134,6 +249,10 @@ metadata:
   name: portfolio-service
   labels:
     app: portfolio
+    solution: stock-trader
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9080"
 spec:
   type: NodePort
   ports:
@@ -160,6 +279,8 @@ metadata:
     ingress.kubernetes.io/secure-backends: "true"
     ingress.kubernetes.io/app-root: "/portfolio"
   name: portfolio-ingress
+  labels:
+    app: stock-trader
 spec:
   rules:
   - host:
@@ -169,4 +290,3 @@ spec:
         backend:
           serviceName: portfolio-service
           servicePort: 9443
-

@@ -1,0 +1,183 @@
+#       Copyright 2017 IBM Corp All Rights Reserved
+
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+
+#       http://www.apache.org/licenses/LICENSE-2.0
+
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+
+################################################################################################
+## Configuration for deploying Stock Portfolio microservice using WebSphere Liberty helm chart
+################################################################################################
+
+image:
+  # repository: portfolio # Microservice Builder
+  # repository: mycluster.icp:8500/stock-trader/portfolio # IBM Cloud Private
+  # repository: registry.ng.bluemix.net/stock_trader/portfolio # IBM Container Service
+  repository: ibmstocktrader/portfolio # Docker Hub
+  tag: latest
+  pullPolicy: Always
+  extraEnvs:
+    - name: JDBC_HOST
+      valueFrom:
+        secretKeyRef:
+          name: db2
+          key: host
+    - name: JDBC_PORT
+      valueFrom:
+        secretKeyRef:
+          name: db2
+          key: port
+    - name: JDBC_DB
+      valueFrom:
+        secretKeyRef:
+          name: db2
+          key: db
+    - name: JDBC_ID
+      valueFrom:
+        secretKeyRef:
+          name: db2
+          key: id
+    - name: JDBC_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db2
+          key: pwd
+    - name: MQ_ID
+      valueFrom:
+        secretKeyRef:
+          name: mq
+          key: id
+    - name: MQ_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mq   
+          key: pwd
+    - name: MQ_HOST
+      valueFrom:
+        secretKeyRef:
+          name: mq
+          key: host
+    - name: MQ_PORT
+      valueFrom:
+        secretKeyRef:
+          name: mq   
+          key: port
+    - name: MQ_CHANNEL
+      valueFrom:
+        secretKeyRef:
+          name: mq   
+          key: channel
+    - name: MQ_QUEUE_MANAGER
+      valueFrom:
+        secretKeyRef:
+          name: mq   
+          key: queue-manager
+    - name: MQ_QUEUE
+      valueFrom:
+          secretKeyRef:
+            name: mq   
+            key: queue
+    - name: WATSON_URL
+      valueFrom:
+        secretKeyRef:
+          name: watson
+          key: url
+    - name: WATSON_ID
+      valueFrom:
+        secretKeyRef:
+          name: watson
+          key: id
+          optional: true
+    - name: WATSON_PWD
+      valueFrom:
+        secretKeyRef:
+          name: watson
+          key: pwd
+    - name: ODM_URL
+      valueFrom:
+        secretKeyRef:
+          name: odm
+          key: url
+          optional: true
+    - name: ODM_ID
+      valueFrom:
+        secretKeyRef:
+          name: odm
+          key: id
+          optional: true
+    - name: ODM_PWD
+      valueFrom:
+        secretKeyRef:
+          name: odm
+          key: pwd
+          optional: true
+    - name: KAFKA_TOPIC
+      valueFrom:
+        secretKeyRef:
+          name: kafka
+          key: topic
+          optional: true
+    - name: KAFKA_ADDRESS
+      valueFrom:
+        secretKeyRef:
+          name: kafka
+          key: address
+          optional: true
+    - name: KAFKA_USER
+      valueFrom:
+        secretKeyRef:
+          name: kafka
+          key: user
+          optional: true
+    - name: KAFKA_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: kafka
+          key: api-key
+          optional: true
+    - name: JWT_AUDIENCE
+      valueFrom:
+        secretKeyRef:
+          name: jwt 
+          key: audience
+    - name: JWT_ISSUER
+      valueFrom:
+        secretKeyRef:
+          name: jwt
+          key: issuer
+
+resourceNameOverride: stock-trader
+
+pod:
+  labels:
+    solution: stock-trader
+
+service:
+  enabled: true
+  name: portfolio-service
+  port: 9443
+  targetPort: 9443
+  type: NodePort
+  extraPorts:
+    - name: portfolio-service-http
+      protocol: TCP
+      port: 9080
+      targetPort: 9080
+
+ingress:
+  enabled: true 
+  path: "/portfolio"
+  annotations: 
+    ingress.kubernetes.io/app-root: "/portfolio"
+    nginx.ingress.kubernetes.io/app-root: "/portfolio"
+
+monitoring:
+  enabled: true

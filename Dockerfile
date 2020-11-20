@@ -1,4 +1,4 @@
-#       Copyright 2017 IBM Corp All Rights Reserved
+#       Copyright 2017-2020 IBM Corp All Rights Reserved
 
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,14 +12,35 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# FROM openliberty/open-liberty:microProfile1
-FROM websphere-liberty:microProfile
+FROM alpine:latest AS cert-extractor
+ARG keycloak_connection_string
+ARG extract_keycloak_cert
+RUN echo "Extract cert: '$extract_keycloak_cert' - Connection string: '$keycloak_connection_string'" && touch keycloak.pem
+RUN if [ "$extract_keycloak_cert" = "true" ]; then apk add openssl && openssl s_client -showcerts -connect ${keycloak_connection_string} </dev/null 2>/dev/null|openssl x509 -outform PEM > keycloak.pem ; fi
 
-COPY server.xml /config/server.xml
-COPY db2jcc4.jar /config/db2jcc4.jar
-COPY wmq.jmsra.rar /config/wmq.jmsra.rar
-COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-COPY key.jks /config/resources/security/key.jks
-COPY keystore.xml /config/configDropins/defaults/keystore.xml
-# COPY ltpa.keys /config/resources/security/ltpa.keys
-RUN installUtility install --acceptLicense defaultServer
+FROM maven:3.6-jdk-11-slim AS build
+COPY . /usr/
+RUN mvn -f /usr/pom.xml clean package
+
+FROM openliberty/open-liberty:kernel-slim-java11-openj9-ubi
+
+# Following line is a workaround for an issue where sometimes the server somehow loads the built-in server.xml,
+# rather than the one I copy into the image.  That shouldn't be possible, but alas, it appears to be some Docker bug.
+RUN rm /opt/ol/wlp/usr/servers/defaultServer/server.xml
+
+ARG extract_keycloak_cert
+USER root
+COPY src/main/liberty/config /opt/ol/wlp/usr/servers/defaultServer/
+
+# This script will add the requested XML snippets to enable Liberty features and grow image to be fit-for-purpose using featureUtility. 
+# Only available in 'kernel-slim'. The 'full' tag already includes all features for convenience.
+RUN features.sh
+
+COPY --from=build /usr/target/portfolio-1.0-SNAPSHOT.war /opt/ol/wlp/usr/servers/defaultServer/apps/Portfolio.war
+COPY --from=build /usr/target/prereqs/jcc-11.5.4.0.jar /opt/ol/wlp/usr/servers/defaultServer/db2jcc4.jar
+COPY --from=build /usr/target/prereqs/wmq.jmsra-9.2.0.1.rar /opt/ol/wlp/usr/servers/defaultServer/wmq.jmsra.rar  
+COPY --from=cert-extractor /keycloak.pem /tmp/keycloak.pem
+RUN chown -R 1001:0 config/
+USER 1001
+RUN if [ "$extract_keycloak_cert" = "true" ]; then keytool -import -v -trustcacerts -alias keycloak -file /tmp/keycloak.pem -keystore /opt/ol/wlp/usr/servers/defaultServer/resources/security/trust.p12 --noprompt --storepass St0ckTr@der ; fi
+RUN configure.sh
