@@ -34,7 +34,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 /** mpRestClient "remote" interface for the trade history microservice */
 public interface TradeHistoryClient {
     @GET
-    @Path("/returns/{owner}")
+    @Path("/{owner}/returns")
     @Produces(MediaType.TEXT_PLAIN)
     public String getReturns(@HeaderParam("Authorization") String jwt, @PathParam("owner") String ownerName, @QueryParam("currentValue") Double portfolioValue);
 }
