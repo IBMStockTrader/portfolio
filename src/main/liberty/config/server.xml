@@ -1,5 +1,5 @@
 <!--
-       Copyright 2017-2020 IBM Corp All Rights Reserved
+       Copyright 2017-2021 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@
     <featureManager>
         <feature>microProfile-3.3</feature>
         <feature>jdbc-4.2</feature>
-        <feature>jms-2.0</feature>
-        <feature>jca-1.7</feature>
         <feature>jndi-1.0</feature>
         <feature>appSecurity-2.0</feature>
         <feature>monitor-1.0</feature>
@@ -59,31 +57,6 @@
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
-
-    <authData id="MQ-Credentials" user="${env.MQ_ID}" password="${env.MQ_PASSWORD}"></authData>
-
-    <resourceAdapter id="mq" location="/config/wmq.jmsra.rar"/>
-
-    <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory" containerAuthDataRef="MQ-Credentials">
-        <properties.mq
-            transportType="CLIENT"
-            hostName="${env.MQ_HOST}"
-            port="${env.MQ_PORT}"
-            channel="${env.MQ_CHANNEL}"
-            queueManager="${env.MQ_QUEUE_MANAGER}"/>
-    </jmsQueueConnectionFactory>
-    <jmsQueue id="NotificationQ" jndiName="jms/Portfolio/NotificationQueue">
-        <properties.mq baseQueueName="${env.MQ_QUEUE}" baseQueueManagerName="${env.MQ_QUEUE_MANAGER}"/>
-    </jmsQueue>
-
-<!-- Use this to be a client to Liberty's built-in JMS provider (running in a messaging-engine pod) instead of MQ
-    <jmsQueueConnectionFactory id="NotificationQCF" jndiName="jms/Portfolio/NotificationQueueConnectionFactory">
-        <properties.wasJms remoteServerAddress="messaging-engine-service:7276:BootstrapBasicMessaging"/>
-    </jmsQueueConnectionFactory>
-    <jmsQueue id="NotificationQ" jndiName="jms/Portfolio/NotificationQueue">
-        <properties.wasJms queueName="NotificationQ"/>
-    </jmsQueue>
--->
 
 <!-- Authentication is via JWT SSO
     <basicRegistry id="basic" realm="BasicRegistry">
