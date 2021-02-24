@@ -1,5 +1,5 @@
 /*
-       Copyright 2017-2020 IBM Corp All Rights Reserved
+       Copyright 2017-2021 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,15 +16,10 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio;
 
-import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client.ODMClient;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client.StockQuoteClient;
-import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client.TradeHistoryClient;
-import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client.WatsonClient;
-import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Feedback;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Portfolio;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Quote;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Stock;
-import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.WatsonInput;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.dao.PortfolioDao;
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.dao.StockDao;
 
@@ -105,7 +100,6 @@ public class PortfolioService extends Application {
 	private static final short  MAX_ERRORS       = 3;           //health check will fail if this threshold is met
 	private static final String FAIL             = "FAIL";      //trying to create a portfolio with this name will always throw a 400
 
-	private static boolean initialized = false;
 	private static boolean staticInitialized = false;
 	public  static short   consecutiveErrors = 0; //used in health check
 
@@ -122,18 +116,11 @@ public class PortfolioService extends Application {
 	private StockDao stockDAO;
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
-	private @Inject @RestClient TradeHistoryClient tradeHistoryClient;
-	private @Inject @RestClient ODMClient odmClient;
-	private @Inject @RestClient WatsonClient watsonClient;
 
-	private @Inject @ConfigProperty(name = "ODM_ID", defaultValue = "odmAdmin") String odmId;
-	private @Inject @ConfigProperty(name = "ODM_PWD", defaultValue = "odmAdmin") String odmPwd;
-	private @Inject @ConfigProperty(name = "WATSON_ID", defaultValue = "apikey") String watsonId;
-	private @Inject @ConfigProperty(name = "WATSON_PWD", defaultValue = "") String watsonPwd; //if using an API Key, it goes here
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
-	// Override ODM Client URL if secret is configured to provide URL
+	// Override Stock Quote Client URL if secret is configured to provide URL
 	static {
 		String mpUrlPropName = StockQuoteClient.class.getName() + "/mp-rest/url";
 		String urlFromEnv = System.getenv("STOCK_QUOTE_URL");
@@ -142,33 +129,6 @@ public class PortfolioService extends Application {
 			System.setProperty(mpUrlPropName, urlFromEnv);
 		} else {
 			logger.info("Stock Quote URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
-		}
-
-		mpUrlPropName = TradeHistoryClient.class.getName() + "/mp-rest/url";
-		urlFromEnv = System.getenv("TRADE_HISTORY_URL");
-		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
-			logger.info("Using Trade History URL from config map: " + urlFromEnv);
-			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Trade History URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
-		}
-
-		mpUrlPropName = ODMClient.class.getName() + "/mp-rest/url";
-		urlFromEnv = System.getenv("ODM_URL");
-		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
-			logger.info("Using ODM URL from config map: " + urlFromEnv);
-			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("ODM URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
-		}
-
-		mpUrlPropName = WatsonClient.class.getName() + "/mp-rest/url";
-		urlFromEnv = System.getenv("WATSON_URL");
-		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
-			logger.info("Using Watson URL from config map: " + urlFromEnv);
-			System.setProperty(mpUrlPropName, urlFromEnv);
-		} else {
-			logger.info("Watson URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
 	}
 
@@ -233,12 +193,11 @@ public class PortfolioService extends Application {
 
 			logger.info("Creating portfolio for "+owner);
 
-			//total=0.0, loyalty="Basic", balance=50.0, commissions=0.0, free=0, sentiment="Unknown", nextCommission=9.99
-			portfolio = new Portfolio(owner, 0.0, "Basic", 50.0, 0.0, 0, "Unknown", 9.99);
+			portfolio = new Portfolio(owner, 0.0);
 
-			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, 'Basic', 50.0, 0.0, 0, 'Unknown')");
+			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0)");
 			
-			if(portfolioDAO.readEvent(owner) == null) {
+			if (portfolioDAO.readEvent(owner) == null) {
 				portfolioDAO.createPortfolio(portfolio);
 			} else {
 				logger.warning("Portfolio already exists for: "+owner);
@@ -260,7 +219,6 @@ public class PortfolioService extends Application {
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
 		if (portfolio != null) {
-			String oldLoyalty = portfolio.getLoyalty();
 			double overallTotal = 0;
 
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
@@ -323,7 +281,7 @@ public class PortfolioService extends Application {
 				stock.setPrice(price);
 				stock.setTotal(total);
 
-				if (price != -1) //-1 is the marker for not being able to get the stock quote.  But don't actually add that value
+				if (price != ERROR) //-1 is the marker for not being able to get the stock quote.  But don't actually add that value
 					overallTotal += total;
 
 				logger.info("Adding "+symbol+" to portfolio for "+owner);
@@ -332,13 +290,6 @@ public class PortfolioService extends Application {
 			logger.info("Processed "+count+" stocks for "+owner);
 
 			portfolio.setTotal(overallTotal);
-
-			String loyalty = utilities.invokeODM(odmClient, odmId, odmPwd, owner, overallTotal, oldLoyalty, request);
-			portfolio.setLoyalty(loyalty);
-
-			int free = portfolio.getFree();
-			portfolio.setFree(free);
-			portfolio.setNextCommission(free>0 ? 0.0 : utilities.getCommission(loyalty));
 
 			portfolioDAO.updatePortfolio(portfolio);
 
@@ -370,32 +321,12 @@ public class PortfolioService extends Application {
 		return portfolio;
 	}
     
-	@GET
-	@Path("/{owner}/returns")
-	@Produces(MediaType.TEXT_PLAIN)
-	@Transactional
-	public String getPortfolioReturns(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
-		Double portfolioValue = getPortfolio(owner, request).getTotal();
-		
-		String jwt = request.getHeader("Authorization");
-		String result = "Unknown";
-		try {
-			result = tradeHistoryClient.getReturns(jwt, owner, portfolioValue);
-		} catch (Throwable t) {
-			logger.info("Unable to invoke TradeHistory.  This is an optional microservice and the following exception is expected if it is not deployed");
-			utilities.logException(t);
-		}
-		return result;
-	}
-
 	@PUT
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @Context HttpServletRequest request) throws IOException, SQLException {
-		double commission = processCommission(owner); //throws a 404 if not found
-
+	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @QueryParam("commission") double commission, @Context HttpServletRequest request) throws IOException, SQLException {
 		Stock stock = new Stock();
 		stock.setCommission(commission);
 		stock.setSymbol(symbol);
@@ -457,65 +388,6 @@ public class PortfolioService extends Application {
 		return portfolio; //maybe this method should return void instead?
 	}
 
-	@POST
-	@Path("/{owner}/feedback")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	@Transactional
-//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Feedback submitFeedback(@PathParam("owner") String owner, WatsonInput input) throws IOException, SQLException {
-		String sentiment = "Unknown";
-		try {
-			initialize();
-		} catch (NamingException ne) {
-			logger.warning("Error occurred during initialization");
-		}
-
-		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
-		portfolioDAO.updatePortfolio(portfolio);
-		int freeTrades = portfolio.getFree();
-
-		Feedback feedback = utilities.invokeWatson(watsonClient, watsonId, watsonPwd, input);
-		freeTrades += feedback.getFree();
-
-		portfolio.setFree(freeTrades);
-		portfolio.setSentiment(feedback.getSentiment());
-
-		logger.info("Returning feedback: "+feedback.toString());
-		return feedback;
-	}
-
-	private double processCommission(String owner) throws SQLException {
-		logger.info("Getting loyalty level for "+owner);
-		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
-		portfolioDAO.updatePortfolio(portfolio);
-		String loyalty = portfolio.getLoyalty();
-	
-		double commission = utilities.getCommission(loyalty);
-
-		int free = portfolio.getFree();
-		if (free > 0) { //use a free trade if available
-			free--;
-			commission = 0.0;
-
-			logger.info("Using free trade for "+owner);
-			portfolio.setFree(free);
-		} else {
-			double commissions = portfolio.getCommissions();
-			commissions += commission;
-
-			double balance = portfolio.getBalance();
-			balance -= commission;
-
-			logger.info("Charging commission of $"+commission+" for "+owner);
-			portfolio.setCommissions(commissions);
-			portfolio.setBalance(balance);
-		}
-
-		logger.info("Returning a commission of $"+commission);
-		return commission;
-	}
-
 	private static void staticInitialize() throws NamingException {
 		if (!staticInitialized) try {
 			logger.info("Obtaining JDBC Datasource");
@@ -540,18 +412,5 @@ public class PortfolioService extends Application {
 	@Traced
 	private void initialize() throws NamingException {
 		if (!staticInitialized) staticInitialize();
-
-		if (watsonId != null) {
-			logger.info("Watson initialization completed successfully!");
-		} else {
-			logger.warning("WATSON_ID config property is null");
-		}
-
-		if (odmId != null) {
-			logger.info("Initialization complete");
-		} else {
-			logger.warning("ODM_ID config property is null");
-		}
-		initialized = true;
 	}
 }
