@@ -1,4 +1,4 @@
-#       Copyright 2017-2020 IBM Corp All Rights Reserved
+#       Copyright 2017-2021 IBM Corp All Rights Reserved
 
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -27,16 +27,13 @@ FROM openliberty/open-liberty:kernel-slim-java11-openj9-ubi
 ARG extract_keycloak_cert
 USER root
 COPY src/main/liberty/config /opt/ol/wlp/usr/servers/defaultServer/
-#Workaround for https://github.com/OpenLiberty/ci.docker/issues/244
-RUN touch /opt/ol/wlp/servers/defaultServer/server.xml
 
 # This script will add the requested XML snippets to enable Liberty features and grow image to be fit-for-purpose using featureUtility. 
 # Only available in 'kernel-slim'. The 'full' tag already includes all features for convenience.
 RUN features.sh
 
 COPY --from=build /usr/target/portfolio-1.0-SNAPSHOT.war /opt/ol/wlp/usr/servers/defaultServer/apps/Portfolio.war
-COPY --from=build /usr/target/prereqs/jcc-11.5.4.0.jar /opt/ol/wlp/usr/servers/defaultServer/db2jcc4.jar
-COPY --from=build /usr/target/prereqs/wmq.jmsra-9.2.0.1.rar /opt/ol/wlp/usr/servers/defaultServer/wmq.jmsra.rar  
+COPY --from=build /usr/target/prereqs/jcc-11.5.5.0.jar /opt/ol/wlp/usr/servers/defaultServer/db2jcc4.jar
 COPY --from=cert-extractor /keycloak.pem /tmp/keycloak.pem
 RUN chown -R 1001:0 config/
 USER 1001
