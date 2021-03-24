@@ -16,7 +16,9 @@
 
 <server description="Portfolio server">
     <featureManager>
-        <feature>microProfile-3.3</feature>
+        <!-- If adopting MicroProfile Reactive Messaging 1.0 (mpReactiveMessaging-1.0), need to downgrade to microProfile-3.3.
+             See https://github.com/OpenLiberty/open-liberty/issues/15440 for details.
+        <feature>microProfile-4.0</feature>
         <feature>jdbc-4.2</feature>
         <feature>jndi-1.0</feature>
         <feature>appSecurity-2.0</feature>
