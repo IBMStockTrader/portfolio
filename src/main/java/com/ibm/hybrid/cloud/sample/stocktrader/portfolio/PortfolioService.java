@@ -38,7 +38,7 @@ import javax.sql.DataSource;
 
 //CDI 2.0
 import javax.inject.Inject;
-import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.ApplicationScoped;
 
 //mpConfig 1.3
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -89,7 +89,7 @@ import javax.ws.rs.WebApplicationException;
 @ApplicationPath("/")
 @Path("/")
 @LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
-@RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
+@ApplicationScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JPA to DB2 (or whatever JDBC provider is defined in your server.xml).
  */
 public class PortfolioService extends Application {
