@@ -182,7 +182,7 @@ public class PortfolioService extends Application {
 	@Counted(name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader application")
 	@Transactional
 	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio createPortfolio(@PathParam("owner") String owner) throws SQLException {
+	public Portfolio createPortfolio(@PathParam("owner") String owner, @QueryParam("accountID") String accountID) throws SQLException {
 		Portfolio portfolio = null;
 		if (owner != null) {
 			if (owner.equalsIgnoreCase(FAIL)) {
@@ -193,7 +193,7 @@ public class PortfolioService extends Application {
 
 			logger.info("Creating portfolio for "+owner);
 
-			portfolio = new Portfolio(owner, 0.0);
+			portfolio = new Portfolio(owner, 0.0, accountID);
 
 			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0)");
 			
