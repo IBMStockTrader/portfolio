@@ -15,6 +15,6 @@
 --   Run this via "db2 -tf createTables.ddl"
 
 CONNECT TO Sample;
-CREATE TABLE Portfolio(owner VARCHAR(32) NOT NULL, total DOUBLE, PRIMARY KEY(owner));
+CREATE TABLE Portfolio(owner VARCHAR(32) NOT NULL, total DOUBLE, accountID VARCHAR(64), PRIMARY KEY(owner));
 CREATE TABLE Stock(owner VARCHAR(32) NOT NULL, symbol VARCHAR(8) NOT NULL, shares INTEGER, price DOUBLE, total DOUBLE, dateQuoted DATE, commission DOUBLE, FOREIGN KEY (owner) REFERENCES Portfolio(owner) ON DELETE CASCADE, PRIMARY KEY(owner, symbol));
 CONNECT RESET;
