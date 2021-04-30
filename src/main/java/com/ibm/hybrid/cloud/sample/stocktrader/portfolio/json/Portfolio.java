@@ -44,7 +44,12 @@ public class Portfolio {
     @Id
     @Column(nullable = false, length = 32)
     private String owner;
+
     private double total;
+
+    @Column(nullable = true, length = 64)
+    private String accountID;
+
     @Transient
     JsonObject stocks;
 
@@ -64,6 +69,12 @@ public class Portfolio {
         setTotal(initialTotal);
     }
 
+    public Portfolio(String initialOwner, double initialTotal, String initialAccountID) {
+        setOwner(initialOwner);
+        setTotal(initialTotal);
+        setAccountID(initialAccountID);
+    }
+
     public String getOwner() {
         return owner;
     }
@@ -78,6 +89,14 @@ public class Portfolio {
 
     public void setTotal(double newTotal) {
         total = newTotal;
+    }
+
+    public String getAccountID() {
+        return accountID;
+    }
+
+    public void setAccountID(String newAccountID) {
+        accountID = newAccountID;
     }
 
     public JsonObject getStocks() {
@@ -128,6 +147,6 @@ public class Portfolio {
    }
 
     public String toString() {
-        return "{\"owner\": \""+owner+"\", \"total\": "+total+", \"stocks\": "+(stocks!=null?stocks.toString():"{}")+"}";
+        return "{\"owner\": \""+owner+"\", \"total\": "+total+", \"accountID\": \""+accountID+"\", \"stocks\": "+(stocks!=null?stocks.toString():"{}")+"}";
     }
 }
