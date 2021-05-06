@@ -216,9 +216,9 @@ public class PortfolioService extends Application {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio getPortfolio(@PathParam("owner") String owner, @Context HttpServletRequest request) throws IOException, SQLException {
+	public Portfolio getPortfolio(@PathParam("owner") String owner, @QueryParam("immutable") boolean immutable, @Context HttpServletRequest request) throws IOException, SQLException {
 		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
-		if (portfolio != null) {
+		if (!immutable && (portfolio != null)) {
 			double overallTotal = 0;
 
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
@@ -246,7 +246,7 @@ public class PortfolioService extends Application {
 					price = quote.getPrice();
 
 					total = shares * price;
-					
+
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
 					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
 					stock.setDate(date);
@@ -342,6 +342,7 @@ public class PortfolioService extends Application {
 		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
 		List<Stock> results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
 
+		boolean deleteStock = false;
 		if (!results.isEmpty()) { //row exists
 			stock = results.get(0);
 			int oldShares = stock.getShares();
@@ -356,7 +357,7 @@ public class PortfolioService extends Application {
 				//getPortfolio will fill in the price, date and total
 			} else {
 				logger.fine("Running following SQL: DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				stockDAO.deleteStock(stock);
+				deleteStock = true;
 			}
 		} else {
 			logger.fine("Running following SQL: INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
@@ -366,9 +367,11 @@ public class PortfolioService extends Application {
 
 		//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
 		logger.info("Refreshing portfolio for "+owner);
-		portfolio = getPortfolio(owner, request);
+		portfolio = getPortfolio(owner, false, request);
 
 		utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
+
+		if (deleteStock) stockDAO.deleteStock(stock); //delay deleting until after invoking Kafka, which needs the quote info that would be gone after the delete
 
 		return portfolio;
 	}
