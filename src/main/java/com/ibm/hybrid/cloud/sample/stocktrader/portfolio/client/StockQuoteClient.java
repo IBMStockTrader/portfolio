@@ -1,5 +1,5 @@
 /*
-       Copyright 2017 IBM Corp All Rights Reserved
+       Copyright 2017-2021 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,18 +17,21 @@
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Quote;
-import javax.enterprise.context.Dependent;
+
+import javax.enterprise.context.ApplicationScoped;
+
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Path;
+
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 @ApplicationPath("/")
 @Path("/")
-@Dependent
+@ApplicationScoped
 @RegisterRestClient
 /** mpRestClient "remote" interface for the stock quote microservice */
 public interface StockQuoteClient {
