@@ -43,7 +43,7 @@ public class PortfolioUtilities {
 	private static EventStreamsProducer kafkaProducer = null;
 
 	/** Send a message to IBM Event Streams via the Kafka APIs */
-	/*  TODO: Replace this with mpReactiveMessaging */
+	/*  TODO: Replace this with Emitter from mpReactiveMessaging 2.0 when it becomes available */
 	@Traced
 	void invokeKafka(Portfolio portfolio, String symbol, int shares, double commission, String kafkaAddress, String kafkaTopic) {
 		if ((kafkaAddress == null) || kafkaAddress.isEmpty()) {
@@ -51,7 +51,7 @@ public class PortfolioUtilities {
 			return; //only do the following if Kafka is configured
 		}
 
-		logger.info("Preparing to send a Kafka message");
+		logger.fine("Preparing to send a Kafka message");
 
 		try {
 			if (kafkaProducer == null) kafkaProducer = new EventStreamsProducer(kafkaAddress, kafkaTopic);
