@@ -38,7 +38,7 @@ import javax.sql.DataSource;
 
 //CDI 2.0
 import javax.inject.Inject;
-import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.RequestScoped;
 
 //mpConfig 1.3
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -89,7 +89,7 @@ import javax.ws.rs.WebApplicationException;
 @ApplicationPath("/")
 @Path("/")
 @LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
-@ApplicationScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
+@RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JPA to DB2 (or whatever JDBC provider is defined in your server.xml).
  */
 public class PortfolioService extends Application {
@@ -152,25 +152,39 @@ public class PortfolioService extends Application {
 	@Transactional
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio[] getPortfolios() throws SQLException {
+		int count = 0;
+		Portfolio[] portfolios = null;
 
-		logger.fine("Running following SQL: SELECT * FROM Portfolio");
-		List<Portfolio> portfolioList = portfolioDAO.readAllPortfolios();
-		int count = portfolioList.size();
-	
-		logger.info("Returning "+count+" portfolios");
+		try {
+			logger.fine("Running following SQL: SELECT * FROM Portfolio");
+			List<Portfolio> portfolioList = portfolioDAO.readAllPortfolios();
+			count = portfolioList.size();
 
-		Portfolio[] portfolios = new Portfolio[count];
-		portfolioList.toArray(portfolios);
+			portfolios = new Portfolio[count];
+			portfolioList.toArray(portfolios);
 
-		if (logger.isLoggable(Level.FINE)) {
-			StringBuffer json = new StringBuffer("[");
-			for (int index=0; index<count; index++) {
-				Portfolio portfolio = portfolios[index];
-				json.append(portfolio.toString());
-				if (index != count-1) json.append(", ");
+			consecutiveErrors = 0;
+		} catch (Throwable t) {
+			consecutiveErrors++;
+			logger.warning("Failed getting portfolios");
+			PortfolioUtilities.logException(t);
+		}
+
+		if (count == 0) {
+			logger.info("No portfolios to return");
+		} else {
+			logger.fine("Returning "+count+" portfolios");
+
+			if (logger.isLoggable(Level.FINE)) {
+				StringBuffer json = new StringBuffer("[");
+				for (int index=0; index<count; index++) {
+					Portfolio portfolio = portfolios[index];
+					json.append(portfolio.toString());
+					if (index != count-1) json.append(", ");
+				}
+				json.append("]");
+				logger.fine(json.toString());
 			}
-			json.append("]");
-			logger.fine(json.toString());
 		}
 
 		return portfolios;
@@ -184,18 +198,18 @@ public class PortfolioService extends Application {
 	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio createPortfolio(@PathParam("owner") String owner, @QueryParam("accountID") String accountID) throws SQLException {
 		Portfolio portfolio = null;
-		if (owner != null) {
+		if (owner != null) try {
 			if (owner.equalsIgnoreCase(FAIL)) {
 				logger.warning("Throwing a 400 error for owner: "+owner);
 				consecutiveErrors++;
 				throw new BadRequestException("Invalid value for portfolio owner: "+owner);
 			}
 
-			logger.info("Creating portfolio for "+owner);
+			logger.fine("Creating portfolio for "+owner+ "with accountID = "+accountID);
 
 			portfolio = new Portfolio(owner, 0.0, accountID);
 
-			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0)");
+			logger.fine("Running following SQL: INSERT INTO Portfolio VALUES ('"+owner+"', 0.0, "+accountID+")");
 			
 			if (portfolioDAO.readEvent(owner) == null) {
 				portfolioDAO.createPortfolio(portfolio);
@@ -204,8 +218,12 @@ public class PortfolioService extends Application {
 				throw new WebApplicationException("Portfolio already exists for "+owner+"!", CONFLICT);			
 			}
 
-			logger.info("Portfolio created successfully");
+			logger.fine("Portfolio created successfully");
 			consecutiveErrors = 0;
+		} catch (Throwable t) {
+			consecutiveErrors++;
+			logger.warning("Failed creating portfolio for "+owner);
+			PortfolioUtilities.logException(t);
 		}
 
 		return portfolio;
@@ -217,8 +235,10 @@ public class PortfolioService extends Application {
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio getPortfolio(@PathParam("owner") String owner, @QueryParam("immutable") boolean immutable, @Context HttpServletRequest request) throws IOException, SQLException {
-		Portfolio portfolio = getPortfolioWithoutStocks(owner, true); //throws a 404 if not found
-		if (!immutable && (portfolio != null)) {
+		logger.fine("Getting portfolio for "+owner);
+
+		Portfolio portfolio = getPortfolioWithoutStocks(owner); //throws a 404 if not found
+		if (!immutable && (portfolio != null)) try {
 			double overallTotal = 0;
 
 			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"'");
@@ -237,7 +257,7 @@ public class PortfolioService extends Application {
 				double total = 0;
 				try {
 					//call the StockQuote microservice to get the current price of this stock
-					logger.info("Calling stock-quote microservice for "+symbol);
+					logger.fine("Calling stock-quote microservice for "+symbol);
 
 					String jwt = request.getHeader("Authorization");
 					Quote quote = stockQuoteClient.getStockQuote(jwt, symbol);
@@ -248,7 +268,7 @@ public class PortfolioService extends Application {
 					total = shares * price;
 
 					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
-					logger.info("Updated "+symbol+" entry for "+owner+" in Stock table");
+					logger.fine("Updated "+symbol+" entry for "+owner+" in Stock table");
 					stock.setDate(date);
 					stock.setPrice(price);
 					stock.setTotal(total);
@@ -284,7 +304,7 @@ public class PortfolioService extends Application {
 				if (price != ERROR) //-1 is the marker for not being able to get the stock quote.  But don't actually add that value
 					overallTotal += total;
 
-				logger.info("Adding "+symbol+" to portfolio for "+owner);
+				logger.fine("Adding "+symbol+" to portfolio for "+owner);
 				portfolio.addStock(stock);
 			}
 			logger.info("Processed "+count+" stocks for "+owner);
@@ -293,28 +313,41 @@ public class PortfolioService extends Application {
 
 			portfolioDAO.updatePortfolio(portfolio);
 
-			logger.info("Returning "+portfolio.toString());
+			logger.fine("Returning "+portfolio.toString());
+			consecutiveErrors = 0;
+		} catch (Throwable t) {
+			consecutiveErrors++;
+			logger.warning("Failure refreshing portfolio for "+owner);
+			PortfolioUtilities.logException(t);
 		} else {
-			portfolio = new Portfolio(); //so we don't return null
-			logger.warning("No portfolio found for "+owner); //shouldn't get here; an exception with a 404 should be thrown instead
+			if (portfolio == null) {
+				logger.warning("No portfolio found for "+owner); //shouldn't get here; an exception with a 404 should be thrown instead
+			}
 		}
 
 		return portfolio;
 	}
 
-	private Portfolio getPortfolioWithoutStocks(String owner, boolean throw404) throws SQLException {
-		logger.fine("Running following SQL: SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
+	@Traced
+	private Portfolio getPortfolioWithoutStocks(String owner) throws SQLException {
+		Portfolio portfolio = null;
 
-		Portfolio portfolio = portfolioDAO.readEvent(owner);
+		try {
+			logger.fine("Running following SQL: SELECT * FROM Portfolio WHERE owner = '"+owner+"'");
+
+			portfolio = portfolioDAO.readEvent(owner);
+		} catch (Throwable t) {
+			consecutiveErrors++;
+			logger.warning("Problem retrieving portfolio for "+owner);
+			PortfolioUtilities.logException(t);
+		}
 
 		if (portfolio != null) {
-			logger.info("Found portfolio for "+owner);
+			logger.fine("Found portfolio for "+owner);
+			consecutiveErrors = 0;
 		} else {
-			if (throw404) {
-				throw new NotFoundException("No such portfolio: "+owner); //send back a 404
-			} else {
-				logger.info("No such portfolio: "+owner);
-			}
+			logger.warning("No such portfolio: "+owner); //this remains info level since this means something could be wrong
+			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
 		}
 
 		logger.fine("Returning "+((portfolio==null) ? "null" : portfolio.toString()));
@@ -327,51 +360,58 @@ public class PortfolioService extends Application {
 	@Transactional(TxType.REQUIRED) //two-phase commit (XA) across JDBC and JMS
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio updatePortfolio(@PathParam("owner") String owner, @QueryParam("symbol") String symbol, @QueryParam("shares") int shares, @QueryParam("commission") double commission, @Context HttpServletRequest request) throws IOException, SQLException {
+		logger.fine("Updating portfolio for "+owner);
+
 		Stock stock = new Stock();
 		stock.setCommission(commission);
 		stock.setSymbol(symbol);
 		stock.setShares(shares);
 
-		Portfolio portfolio = portfolioDAO.readEvent(owner);
-		if (portfolio != null) {
-			stock.setPortfolio(portfolio);
-		} else {
-			throw new NotFoundException("No such portfolio: "+owner); //send back a 404
-		}
-        
-		logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
-		List<Stock> results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
-
-		boolean deleteStock = false;
-		if (!results.isEmpty()) { //row exists
-			stock = results.get(0);
-			int oldShares = stock.getShares();
-			double oldCommission = stock.getCommission();
-
-			int newShares = oldShares+shares;
-			double newCommission = oldCommission+commission;
-			if (newShares > 0) {
-				logger.fine("Running following SQL: UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				stock.setShares(newShares);
-				stock.setCommission(newCommission);
-				//getPortfolio will fill in the price, date and total
-			} else {
-				logger.fine("Running following SQL: DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
-				deleteStock = true;
+		Portfolio portfolio = getPortfolioWithoutStocks(owner);
+		try {
+			if (portfolio != null) {
+				stock.setPortfolio(portfolio);
 			}
-		} else {
-			logger.fine("Running following SQL: INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
-			stockDAO.createStock(stock);
-			//getPortfolio will fill in the price, date and total
+
+			logger.fine("Running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+			List<Stock> results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
+
+			boolean deleteStock = false;
+			if (!results.isEmpty()) { //row exists
+				stock = results.get(0);
+				int oldShares = stock.getShares();
+				double oldCommission = stock.getCommission();
+
+				int newShares = oldShares+shares;
+				double newCommission = oldCommission+commission;
+				if (newShares > 0) {
+					logger.fine("Running following SQL: UPDATE Stock SET shares = "+newShares+", commission = "+newCommission+" WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+					stock.setShares(newShares);
+					stock.setCommission(newCommission);
+					//getPortfolio will fill in the price, date and total
+				} else {
+					logger.fine("Running following SQL: DELETE FROM Stock WHERE owner = '"+owner+"' AND symbol = '"+symbol+"'");
+					deleteStock = true;
+				}
+			} else {
+				logger.fine("Running following SQL: INSERT INTO Stock (owner, symbol, shares, commission) VALUES ('"+owner+"', '"+symbol+"', "+shares+", "+commission+")");
+				stockDAO.createStock(stock);
+				//getPortfolio will fill in the price, date and total
+			}
+
+			//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
+			logger.fine("Refreshing portfolio for "+owner);
+			portfolio = getPortfolio(owner, false, request);
+
+			utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
+
+			if (deleteStock) stockDAO.deleteStock(stock); //delay deleting until after invoking Kafka, which needs the quote info that would be gone after the delete
+			consecutiveErrors = 0;
+		} catch (Throwable t) {
+			consecutiveErrors++;
+			logger.warning("Unable to update portfolio for "+owner);
+			PortfolioUtilities.logException(t);
 		}
-
-		//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
-		logger.info("Refreshing portfolio for "+owner);
-		portfolio = getPortfolio(owner, false, request);
-
-		utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
-
-		if (deleteStock) stockDAO.deleteStock(stock); //delay deleting until after invoking Kafka, which needs the quote info that would be gone after the delete
 
 		return portfolio;
 	}
@@ -382,11 +422,18 @@ public class PortfolioService extends Application {
 	@Transactional
 //	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio deletePortfolio(@PathParam("owner") String owner) throws SQLException {
-		Portfolio portfolio = getPortfolioWithoutStocks(owner, false); //do NOT throw a 404 if not found
+		logger.fine("Delete portfolio for "+owner);
 
-		logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
-		portfolioDAO.deletePortfolio(portfolio);
-		logger.info("Successfully deleted portfolio for "+owner);
+		Portfolio portfolio = getPortfolioWithoutStocks(owner);
+
+		try {
+			logger.fine("Running following SQL: DELETE FROM Portfolio WHERE owner = '"+owner+"'");
+			portfolioDAO.deletePortfolio(portfolio);
+			logger.fine("Successfully deleted portfolio for "+owner);
+		} catch (Throwable t) {
+			logger.warning("Failure deleting portfolio for "+owner);
+			PortfolioUtilities.logException(t);
+		}
 
 		return portfolio; //maybe this method should return void instead?
 	}
@@ -410,10 +457,5 @@ public class PortfolioService extends Application {
 			PortfolioUtilities.logException(re);
 			throw re;
 		}
-	}
-
-	@Traced
-	private void initialize() throws NamingException {
-		if (!staticInitialized) staticInitialize();
 	}
 }
