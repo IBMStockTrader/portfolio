@@ -27,7 +27,11 @@
 <!--    <feature>logstashCollector-1.0</feature> -->
     </featureManager>
 
-    <logging traceSpecification="*=info" consoleLogLevel="INFO" />
+    <variable name="JWT_AUDIENCE" defaultValue="stock-trader"/>
+    <variable name="JWT_ISSUER"   defaultValue="http://stock-trader.ibm.com"/>
+    <variable name="TRACE_SPEC"   defaultValue="*=info"/>
+
+    <logging traceSpecification="${TRACE_SPEC}" consoleLogLevel="INFO" />
 
     <httpEndpoint httpPort="9080" httpsPort="9443" host="*" id="defaultHttpEndpoint"/>
 
@@ -38,9 +42,6 @@
          location="${server.config.dir}/resources/security/trust.p12" />
 
     <ssl id="defaultSSLConfig" keyStoreRef="defaultKeyStore" trustStoreRef="defaultTrustStore" trustDefaultCerts="true" />
-
-    <variable name="JWT_AUDIENCE" defaultValue="stock-trader"/>
-    <variable name="JWT_ISSUER" defaultValue="http://stock-trader.ibm.com"/>
 
     <jwtBuilder id="defaultJWT" keyStoreRef="defaultTrustStore" keyAlias="jwtSigner" issuer="${JWT_ISSUER}" audiences="${JWT_AUDIENCE}" />
     <mpJwt id="stockTraderJWT" audiences="${JWT_AUDIENCE}" issuer="${JWT_ISSUER}" keyName="jwtSigner" ignoreApplicationAuthMethod="false" expiry="12h" sslRef="defaultSSLConfig"/>
