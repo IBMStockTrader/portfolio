@@ -307,7 +307,7 @@ public class PortfolioService extends Application {
 				logger.fine("Adding "+symbol+" to portfolio for "+owner);
 				portfolio.addStock(stock);
 			}
-			logger.info("Processed "+count+" stocks for "+owner);
+			logger.fine("Processed "+count+" stocks for "+owner);
 
 			portfolio.setTotal(overallTotal);
 
