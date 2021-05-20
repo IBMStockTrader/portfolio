@@ -51,7 +51,10 @@ public class Portfolio {
     private String accountID;
 
     @Transient
-    JsonObject stocks;
+    private String operation;
+
+    @Transient
+    private JsonObject stocks;
 
     @JsonbTransient
     @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL)
@@ -97,6 +100,14 @@ public class Portfolio {
 
     public void setAccountID(String newAccountID) {
         accountID = newAccountID;
+    }
+
+    public String getOperation() {
+        return operation;
+    }
+
+    public void setOperation(String newOperation) {
+        operation = newOperation;
     }
 
     public JsonObject getStocks() {
