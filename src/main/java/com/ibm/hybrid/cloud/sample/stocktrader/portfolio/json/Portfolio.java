@@ -158,6 +158,6 @@ public class Portfolio {
    }
 
     public String toString() {
-        return "{\"owner\": \""+owner+"\", \"total\": "+total+", \"accountID\": \""+accountID+"\", \"stocks\": "+(stocks!=null?stocks.toString():"{}")+"}";
+        return "{\"owner\": \""+owner+"\", \"total\": "+total+", \"accountID\": \""+accountID+"\", \"operation\": \""+operation+"\", \"stocks\": "+(stocks!=null?stocks.toString():"{}")+"}";
     }
 }
