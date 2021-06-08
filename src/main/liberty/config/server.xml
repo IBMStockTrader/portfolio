@@ -53,7 +53,7 @@
 -->
 
     <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
-    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_READ_COMMITTED">
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="DB2" description="DB2 JDBC driver jar">
                 <file id="db2jcc4" name="/config/db2jcc4.jar"/>
