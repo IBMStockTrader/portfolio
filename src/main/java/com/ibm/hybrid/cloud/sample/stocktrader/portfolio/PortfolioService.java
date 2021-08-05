@@ -117,6 +117,7 @@ public class PortfolioService extends Application {
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 
+	private @Inject @ConfigProperty(name = "TRADE_HISTORY_ENABLED", defaultValue = false) boolean sendToTradeHistoryTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
@@ -403,7 +404,7 @@ public class PortfolioService extends Application {
 			logger.fine("Refreshing portfolio for "+owner);
 			portfolio = getPortfolio(owner, false, request);
 
-			utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
+			if (sendToTradeHistoryTopic) utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
 
 			if (deleteStock) stockDAO.deleteStock(stock); //delay deleting until after invoking Kafka, which needs the quote info that would be gone after the delete
 			consecutiveErrors = 0;
