@@ -120,7 +120,7 @@ public class PortfolioService extends Application {
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
-	private boolean publishToTradeHistoryTopic;
+	private static boolean publishToTradeHistoryTopic;
 	
 	// Override Stock Quote Client URL if secret is configured to provide URL
 	static {
