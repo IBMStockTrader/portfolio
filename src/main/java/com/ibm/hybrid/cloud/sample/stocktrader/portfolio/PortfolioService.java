@@ -117,12 +117,16 @@ public class PortfolioService extends Application {
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 
-	private @Inject @ConfigProperty(name = "TRADE_HISTORY_ENABLED", defaultValue = false) boolean sendToTradeHistoryTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
+	private boolean publishToTradeHistoryTopic;
+	
 	// Override Stock Quote Client URL if secret is configured to provide URL
 	static {
+		publishToTradeHistoryTopic = Boolean.parseBoolean(System.getenv("TRADE_HISTORY_ENABLED"));
+		logger.info("Publishing to Trade History topic enabled: "+publishToTradeHistoryTopic);
+
 		String mpUrlPropName = StockQuoteClient.class.getName() + "/mp-rest/url";
 		String urlFromEnv = System.getenv("STOCK_QUOTE_URL");
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
@@ -404,7 +408,7 @@ public class PortfolioService extends Application {
 			logger.fine("Refreshing portfolio for "+owner);
 			portfolio = getPortfolio(owner, false, request);
 
-			if (sendToTradeHistoryTopic) utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
+			if (publishToTradeHistoryTopic) utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
 
 			if (deleteStock) stockDAO.deleteStock(stock); //delay deleting until after invoking Kafka, which needs the quote info that would be gone after the delete
 			consecutiveErrors = 0;
