@@ -33,7 +33,7 @@ COPY src/main/liberty/config /config
 RUN features.sh
 
 COPY --from=build /usr/target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
-COPY --from=build /usr/target/prereqs/jcc-11.5.6.0.jar /config/db2jcc4.jar
+COPY --from=build /usr/target/prereqs /config
 COPY --from=cert-extractor /keycloak.pem /tmp/keycloak.pem
 RUN chown -R 1001:0 config/
 USER 1001
