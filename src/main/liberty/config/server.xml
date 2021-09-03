@@ -30,6 +30,7 @@
     <variable name="JWT_AUDIENCE" defaultValue="stock-trader"/>
     <variable name="JWT_ISSUER"   defaultValue="http://stock-trader.ibm.com"/>
     <variable name="TRACE_SPEC"   defaultValue="*=info"/>
+    <variable name="DB_TYPE"      defaultValue="db2"/>
 
     <logging traceSpecification="${TRACE_SPEC}" consoleLogLevel="INFO" />
 
@@ -52,16 +53,9 @@
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
 -->
 
-    <connectionManager id="DB2-Connections" minPoolSize="5" maxPoolSize="50"/>
-    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="DB2-Connections" isolationLevel="TRANSACTION_REPEATABLE_READ">
-        <jdbcDriver>
-            <library name="DB2" description="DB2 JDBC driver jar">
-                <file id="db2jcc4" name="/config/db2jcc4.jar"/>
-            </library>
-        </jdbcDriver>
-        <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
-            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
-    </dataSource>
+    <connectionManager id="dbConnections" minPoolSize="5" maxPoolSize="50"/>
+
+    <include optional="false" location="${server.config.dir}/includes/${DB_TYPE}.xml"/>
 
 <!-- Authentication is via JWT SSO
     <basicRegistry id="basic" realm="BasicRegistry">
