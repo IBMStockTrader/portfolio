@@ -30,7 +30,7 @@
     <variable name="JWT_AUDIENCE" defaultValue="stock-trader"/>
     <variable name="JWT_ISSUER"   defaultValue="http://stock-trader.ibm.com"/>
     <variable name="TRACE_SPEC"   defaultValue="*=info"/>
-    <variable name="DB_TYPE"      defaultValue="db2"/>
+    <variable name="JDBC_KIND"    defaultValue="db2"/>
 
     <logging traceSpecification="${TRACE_SPEC}" consoleLogLevel="INFO" />
 
@@ -55,7 +55,7 @@
 
     <connectionManager id="dbConnections" minPoolSize="5" maxPoolSize="50"/>
 
-    <include optional="false" location="${server.config.dir}/includes/${DB_TYPE}.xml"/>
+    <include optional="false" location="${server.config.dir}/includes/${JDBC_KIND}.xml"/>
 
 <!-- Authentication is via JWT SSO
     <basicRegistry id="basic" realm="BasicRegistry">
