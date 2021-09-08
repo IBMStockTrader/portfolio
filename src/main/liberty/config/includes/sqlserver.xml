@@ -1,0 +1,11 @@
+<server>
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
+        <jdbcDriver>
+            <library name="sqlserver" description="Microsoft SQL Server JDBC driver jar">
+                <file id="sqlserver" name="/config/prereqs/mssql-jdbc-9.4.0.jre11.jar"/>
+            </library>
+        </jdbcDriver>
+        <properties.microsoft.sqlserver serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+    </dataSource>
+</server>

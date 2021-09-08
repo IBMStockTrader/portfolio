@@ -7,8 +7,11 @@
     <persistence-unit name="jpa-unit" transaction-type="JTA">
         <jta-data-source>jdbc/Portfolio/PortfolioDB</jta-data-source>
         <properties>
-            <property name="eclipselink.ddl-generation" value="create-tables"/>
-            <property name="eclipselink.ddl-generation.output-mode" value="both" />
+            <property name="eclipselink.logging.logger" value="JavaLogger"/>
+<!--        <property name="eclipselink.logging.level.sql" value="FINE"/>
+            <property name="eclipselink.logging.parameters" value="true"/> -->
+            <property name="eclipselink.cache.shared.default" value="false"/>  <!-- need this to scale beyond one pod -->
+            <property name="eclipselink.pessimistic-lock" value="Lock"/>
         </properties>
     </persistence-unit>
 </persistence>

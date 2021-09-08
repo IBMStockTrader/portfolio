@@ -41,7 +41,6 @@ public class EventStreamsProducer {
     private final String topic;
     private final String API_KEY  = System.getenv("KAFKA_API_KEY");
     private String USERNAME = System.getenv("KAFKA_USER");
-    private String KEYSTORE = System.getenv("KAFKA_KEYSTORE");
 
     private KafkaProducer<String, String> kafkaProducer;
     
@@ -60,29 +59,27 @@ public class EventStreamsProducer {
             throw new InstantiationException(e.getMessage());
         }
     }
-
+    
     private KafkaProducer<String, String> createProducer(String brokerList) {
         //provide defaults if not customized via environment variables
         if (USERNAME==null) USERNAME = "token";
-        if (KEYSTORE==null) KEYSTORE = "/config/resources/security/certs.jks";
 
         Properties properties = new Properties();
+        //common Kafka configs
         properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, brokerList);
         properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
-        properties.put(CommonClientConfigs.CONNECTIONS_MAX_IDLE_MS_CONFIG, 10000);
-        properties.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 4000);
-        properties.put(ProducerConfig.RETRIES_CONFIG, 0);
-        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-//      properties.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
-        properties.put(SslConfigs.SSL_PROTOCOL_CONFIG, "TLSv1.2");
-        properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, KEYSTORE);
-        properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, "password");
         properties.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
-        String saslJaasConfig = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\""
-            + USERNAME + "\" password=" + API_KEY + ";";
-        properties.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
-        
+        properties.put(SaslConfigs.SASL_JAAS_CONFIG, "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"" + USERNAME + "\" password=\"" + API_KEY + "\";");
+        properties.put(SslConfigs.SSL_PROTOCOL_CONFIG, "TLSv1.2");
+        properties.put(SslConfigs.SSL_ENABLED_PROTOCOLS_CONFIG, "TLSv1.2");
+        properties.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "HTTPS");
+        //Kafka producer configs
+        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        properties.put(ProducerConfig.CLIENT_ID_CONFIG, "stocktrader-producer");
+        properties.put(ProducerConfig.ACKS_CONFIG, "all");
+        properties.put(ProducerConfig.CLIENT_DNS_LOOKUP_CONFIG,"use_all_dns_ips");
+
         KafkaProducer<String, String> kafkaProducer = null;
         
         try {

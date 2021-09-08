@@ -1,0 +1,11 @@
+<server>
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
+        <jdbcDriver>
+            <library name="MySQL" description="MySQL JDBC driver jar">
+                <file id="mysql" name="/config/prereqs/mysql-connector-java-8.0.26.jar"/>
+            </library>
+        </jdbcDriver>
+        <properties serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+    </dataSource>
+</server>

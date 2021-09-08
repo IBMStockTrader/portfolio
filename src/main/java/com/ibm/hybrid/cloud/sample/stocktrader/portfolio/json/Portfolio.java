@@ -1,5 +1,5 @@
 /*
-       Copyright 2017-2019 IBM Corp All Rights Reserved
+       Copyright 2017-2021 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -44,17 +44,17 @@ public class Portfolio {
     @Id
     @Column(nullable = false, length = 32)
     private String owner;
+
     private double total;
-    @Column(length = 8)
-    private String loyalty;
-    private double balance;
-    private double commissions;
-    private int free;
-    private String sentiment;
+
+    @Column(nullable = true, length = 64)
+    private String accountID;
+
     @Transient
-    private double nextCommission;
+    private String operation;
+
     @Transient
-    JsonObject stocks;
+    private JsonObject stocks;
 
     @JsonbTransient
     @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL)
@@ -67,16 +67,15 @@ public class Portfolio {
         setOwner(initialOwner);
     }
 
-    public Portfolio(String initialOwner, double initialTotal, String initialLoyalty, double initialBalance,
-                     double initialCommissions, int initialFree, String initialSentiment, double initialNextCommission) {
+    public Portfolio(String initialOwner, double initialTotal) {
         setOwner(initialOwner);
         setTotal(initialTotal);
-        setLoyalty(initialLoyalty);
-        setBalance(initialBalance);
-        setCommissions(initialCommissions);
-        setFree(initialFree);
-        setSentiment(initialSentiment);
-        setNextCommission(initialNextCommission);
+    }
+
+    public Portfolio(String initialOwner, double initialTotal, String initialAccountID) {
+        setOwner(initialOwner);
+        setTotal(initialTotal);
+        setAccountID(initialAccountID);
     }
 
     public String getOwner() {
@@ -95,52 +94,20 @@ public class Portfolio {
         total = newTotal;
     }
 
-    public String getLoyalty() {
-        return loyalty;
+    public String getAccountID() {
+        return accountID;
     }
 
-    public void setLoyalty(String newLoyalty) {
-        loyalty = newLoyalty;
+    public void setAccountID(String newAccountID) {
+        accountID = newAccountID;
     }
 
-    public double getBalance() {
-        return balance;
+    public String getOperation() {
+        return operation;
     }
 
-    public void setBalance(double newBalance) {
-        balance = newBalance;
-    }
-
-    public double getCommissions() {
-        return commissions;
-    }
-
-    public void setCommissions(double newCommissions) {
-        commissions = newCommissions;
-    }
-
-    public int getFree() {
-        return free;
-    }
-
-    public void setFree(int newFree) {
-        free = newFree;
-    }
-
-    public String getSentiment() {
-        return sentiment;
-    }
-
-    public void setSentiment(String newSentiment) {
-        sentiment = newSentiment;
-    }
-
-    public double getNextCommission() {
-        return nextCommission;
-    }
-
-    public void setNextCommission(double newNextCommission) {
-        nextCommission = newNextCommission;
+    public void setOperation(String newOperation) {
+        operation = newOperation;
     }
 
     public JsonObject getStocks() {
@@ -191,8 +158,6 @@ public class Portfolio {
    }
 
     public String toString() {
-        return "{\"owner\": \""+owner+"\", \"total\": "+total+", \"loyalty\": \""+loyalty+"\", \"balance\": "+balance
-               +", \"commissions\": "+commissions+", \"free\": "+free+", \"nextCommission\": "+nextCommission
-               +", \"sentiment\": \""+sentiment+"\", \"stocks\": "+(stocks!=null?stocks.toString():"{}")+"}";
+        return "{\"owner\": \""+owner+"\", \"total\": "+total+", \"accountID\": \""+accountID+"\", \"operation\": \""+operation+"\", \"stocks\": "+(stocks!=null?stocks.toString():"{}")+"}";
     }
 }
