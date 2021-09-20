@@ -5,7 +5,7 @@
                 <file id="db2jcc4" name="/config/prereqs/jcc-11.5.6.0.jar"/>
             </library>
         </jdbcDriver>
-        <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
+        <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" sslConnection=${env.JDBC_SSL}"
             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
 </server>
