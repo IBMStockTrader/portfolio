@@ -22,7 +22,8 @@
 # COPY . /usr/
 # RUN mvn -f /usr/pom.xml clean package
 
-FROM openliberty/open-liberty:21.0.0.9-kernel-slim-java11-openj9-ubi
+# FROM openliberty/open-liberty:21.0.0.9-kernel-slim-java11-openj9-ubi
+FROM openliberty/open-liberty:21.0.0.9-full-java11-openj9-ubi
 
 # ARG extract_keycloak_cert
 USER root
@@ -30,7 +31,7 @@ COPY src/main/liberty/config /config
 
 # This script will add the requested XML snippets to enable Liberty features and grow image to be fit-for-purpose using featureUtility. 
 # Only available in 'kernel-slim'. The 'full' tag already includes all features for convenience.
-RUN features.sh
+# RUN features.sh
 
 # COPY --from=build /usr/target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
 COPY target/portfolio-1.0-SNAPSHOT.war /config/apps/Portfolio.war
