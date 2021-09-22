@@ -1,11 +1,12 @@
 <server>
+    <variable name="JDBC_SSL" defaultValue="false"/>
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="Postgres" description="PostgreSQL JDBC driver jar">
                 <file id="postgres" name="/config/prereqs/postgresql-42.2.23.jar"/>
             </library>
         </jdbcDriver>
-        <properties.postgresql serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
+        <properties.postgresql serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" ssl="${JDBC_SSL}"
             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
 </server>

@@ -47,7 +47,7 @@ The above REST call would also add a row to the Stocks table via a SQL statement
 and would update the corresponding row in the Portfolio table via a SQL statement like
 `UPDATE Portfolio SET total = 19120.35, loyalty = 'Bronze' WHERE owner = 'John'`.
 
-The code should work with any *JDBC* provider.  It has been tested with **DB2** and with **Derby**.  Changing
+The code should work with any *JDBC* provider.  It has been tested with **DB2**, **PostgreSQL** and with **Derby**.  Changing
 providers simply means updating the *Dockerfile* to copy the *JDBC* jar file into the Docker image, and updating
 the *server.xml* to reference it and specify any database-specific settings.  No *Java* code changes are necessary
 when changing *JDBC* providers.  The database can either be another pod in the same *Kubernetes* environment, or
