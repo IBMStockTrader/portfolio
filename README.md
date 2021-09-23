@@ -1,5 +1,5 @@
 <!--
-       Copyright 2017 IBM Corp All Rights Reserved
+       Copyright 2017-2021 IBM Corp All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
    limitations under the License.
 -->
 
-This service manages a *stock portfolio*.  The data is backed by two **DB2** tables, communicated with
+This microservice manages a *stock portfolio*.  The data is backed by two **DB2** tables, communicated with
 via *JDBC*.  The following operations are available:
 
 `GET /` - gets summary data for all portfolios.
