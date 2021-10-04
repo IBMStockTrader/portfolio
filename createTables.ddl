@@ -1,4 +1,4 @@
---       Copyright 2017 IBM Corp All Rights Reserved
+--       Copyright 2017-2021 IBM Corp All Rights Reserved
 
 --   Licensed under the Apache License, Version 2.0 (the "License");
 --   you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 --   See the License for the specific language governing permissions and
 --   limitations under the License.
 
---   Run this via "db2 -tf createTables.ddl"
+--   Run this via "db2 -tf createTables.ddl" on DB2, or via psql on PostgreSQL
 
-CONNECT TO Sample;
+-- CONNECT TO Sample;
 CREATE TABLE Portfolio(owner VARCHAR(32) NOT NULL, total DOUBLE, accountID VARCHAR(64), PRIMARY KEY(owner));
-CREATE TABLE Stock(owner VARCHAR(32) NOT NULL, symbol VARCHAR(8) NOT NULL, shares INTEGER, price DOUBLE, total DOUBLE, dateQuoted DATE, commission DOUBLE, FOREIGN KEY (owner) REFERENCES Portfolio(owner) ON DELETE CASCADE, PRIMARY KEY(owner, symbol));
-CONNECT RESET;
+-- CREATE TABLE Stock(owner VARCHAR(32) NOT NULL, symbol VARCHAR(8) NOT NULL, shares INTEGER, price DOUBLE, total DOUBLE, dateQuoted DATE, commission DOUBLE, FOREIGN KEY (owner) REFERENCES Portfolio(owner) ON DELETE CASCADE, PRIMARY KEY(owner, symbol));
+-- Above statement worked in DB2, but not in PostgreSQL.  The below should work in any SQL-conpliant database
+CREATE TABLE Stock(owner VARCHAR(32) NOT NULL, symbol VARCHAR(8) NOT NULL, shares INTEGER, price DOUBLE PRECISION, total DOUBLE PRECISION, dateQuoted VARCHAR(10), commission DOUBLE PRECISION, FOREIGN KEY (owner) REFERENCES Portfolio(owner) ON DELETE CASCADE, PRIMARY KEY(owner, symbol));
+-- CONNECT RESET;
