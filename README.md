@@ -14,8 +14,9 @@
    limitations under the License.
 -->
 
-This microservice manages a *stock portfolio*.  The data is backed by two **DB2** tables, communicated with
-via *JDBC*.  The following operations are available:
+This microservice manages a *stock portfolio*.  The data is backed by two relational database
+(such as **DB2** or **PostgreSQL**) tables, communicated with via *JDBC*.  The following operations
+are available:
 
 `GET /` - gets summary data for all portfolios.
 
