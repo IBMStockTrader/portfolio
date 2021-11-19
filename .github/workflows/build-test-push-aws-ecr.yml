@@ -37,16 +37,16 @@ on:
 # Environment variables available to all jobs and steps in this workflow
 env:
   # EDIT secrets with with your registry path, and apikey
-  REGISTRY_NAMESPACE:  ${{ secrets.REGISTRY_NAMESPACE }}
+  # REGISTRY_NAMESPACE:  ${{ secrets.REGISTRY_NAMESPACE }}
   # EDIT with your registry username.
-  IMAGE_NAME: portfolio
+  # IMAGE_NAME: portfolio
   
   GITHUB_SHA: ${{ github.sha }}
   
-  GITOPS_REPO: IBMStockTrader/stocktrader-gitops
-  GITOPS_DIR: application
-  GITOPS_USERNAME: ${{ secrets.GITOPS_USERNAME }}
-  GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+  # GITOPS_REPO: IBMStockTrader/stocktrader-gitops
+  # GITOPS_DIR: application
+  # GITOPS_USERNAME: ${{ secrets.GITOPS_USERNAME }}
+  # GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
 
 
 jobs:
