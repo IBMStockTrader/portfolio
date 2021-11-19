@@ -6,7 +6,8 @@
                 <file id="postgres" name="/config/prereqs/postgresql-42.2.23.jar"/>
             </library>
         </jdbcDriver>
-        <properties.postgresql serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" ssl="${JDBC_SSL}"
+        <properties.postgresql serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
+            ssl="${JDBC_SSL}"  sslfactory="org.postgresql.ssl.DefaultJavaSSLFactory" sslMode="verify-ca"
             user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
 </server>
