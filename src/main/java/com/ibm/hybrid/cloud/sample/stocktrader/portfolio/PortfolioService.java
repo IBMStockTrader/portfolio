@@ -260,32 +260,38 @@ public class PortfolioService extends Application {
 				String date = null;
 				double price = 0;
 				double total = 0;
+				Quote quote = null;
 				try {
 					//call the StockQuote microservice to get the current price of this stock
 					logger.fine("Calling stock-quote microservice for "+symbol);
 
 					String jwt = request.getHeader("Authorization");
-					Quote quote = stockQuoteClient.getStockQuote(jwt, symbol);
+					quote = stockQuoteClient.getStockQuote(jwt, symbol);
 
-					date = quote.getDate();
-					price = quote.getPrice();
+					if (quote != null) {
+						date = quote.getDate();
+						price = quote.getPrice();
 
-					total = shares * price;
+						total = shares * price;
 
-					//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
-					logger.fine("Updated "+symbol+" entry for "+owner+" in Stock table");
-					stock.setDate(date);
-					stock.setPrice(price);
-					stock.setTotal(total);
-					stock.setPortfolio(portfolio);
+						//TODO - is it OK to update rows (not adding or deleting) in the Stock table while iterating over its contents?
+						logger.fine("Updated "+symbol+" entry for "+owner+" in Stock table");
+						stock.setDate(date);
+						stock.setPrice(price);
+						stock.setTotal(total);
+						stock.setPortfolio(portfolio);
 
-					stockDAO.updateStock(stock);
-					stockDAO.detachStock(stock);
-
+						stockDAO.updateStock(stock);
+						stockDAO.detachStock(stock);
+					} else {
+						logger.warning("Received null from StockQuote microservice.  Using cached values instead");
+					}
 				} catch (Throwable t) {
 					logger.warning("Unable to get fresh stock quote.  Using cached values instead");
 					utilities.logException(t);
+				}
 
+				if (quote == null) {
 					date = stock.getDate();
 					if (date == null) {
 						Date now = new Date();
