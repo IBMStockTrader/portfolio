@@ -117,7 +117,7 @@ public class PortfolioService extends Application {
 
 	private @Inject @RestClient StockQuoteClient stockQuoteClient;
 
-	private @Inject @ConfigProperty(name = "KAFKA_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
+	private @Inject @ConfigProperty(name = "KAFKA_HISTORY_TOPIC", defaultValue = "stocktrader") String kafkaTopic;
 	private @Inject @ConfigProperty(name = "KAFKA_ADDRESS", defaultValue = "") String kafkaAddress;
 
 	private static boolean publishToTradeHistoryTopic;
