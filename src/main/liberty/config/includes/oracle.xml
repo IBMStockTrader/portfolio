@@ -2,7 +2,7 @@
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="Oracle" description="Oracle JDBC driver jar">
-                <file id="ojdbc8" name="/config/prereqs/ojdbc8-21.3.0.0.jar"/>
+                <file id="ojdbc8" name="/config/prereqs/ojdbc11-21.6.0.0.1.jar"/>
             </library>
         </jdbcDriver>
         <properties.oracle URL="jdbc:oracle:thin:@//${env.JDBC_HOST}:${env.JDBC_PORT}/${env.JDBC_DB}/"
