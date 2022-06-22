@@ -3,7 +3,7 @@
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="Postgres" description="PostgreSQL JDBC driver jar">
-                <file id="postgres" name="/config/prereqs/postgresql-42.2.25.jar"/>
+                <file id="postgres" name="/config/prereqs/postgresql-42.4.0.jar"/>
             </library>
         </jdbcDriver>
         <properties.postgresql serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
