@@ -1,7 +1,7 @@
 <server>
     <variable name="JDBC_SSL" defaultValue="false"/>
-    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
-        <jdbcDriver>
+    <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" type="javax.sql.ConnectionPoolDataSource" transactional="true" isolationLevel="TRANSACTION_REPEATABLE_READ">
+        <jdbcDriver javax.sql.ConnectionPoolDataSource="org.postgresql.ds.PGConnectionPoolDataSource">
             <library name="Postgres" description="PostgreSQL JDBC driver jar">
                 <file id="postgres" name="/config/prereqs/postgresql-42.4.0.jar"/>
             </library>
