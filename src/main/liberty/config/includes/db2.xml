@@ -3,7 +3,7 @@
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="DB2" description="DB2 JDBC driver jar">
-                <file id="db2jcc4" name="/config/prereqs/jcc-*.jar"/>
+                <file id="db2jcc4" name="/config/prereqs/jcc-11.5.8.0.jar"/>
             </library>
         </jdbcDriver>
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" sslConnection="${JDBC_SSL}"
