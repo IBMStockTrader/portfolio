@@ -1,5 +1,6 @@
 /*
-       Copyright 2017-2021 IBM Corp All Rights Reserved
+       Copyright 2017-2021 IBM Corp, All Rights Reserved
+       Copyright 2023 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -101,6 +102,7 @@ public class PortfolioService extends Application {
 	private static final String FAIL             = "FAIL";      //trying to create a portfolio with this name will always throw a 400
 
 	private static boolean staticInitialized = false;
+	private static boolean useCashAccount = false;
 	public  static short   consecutiveErrors = 0; //used in health check
 
 	private static DataSource datasource = null;
@@ -126,6 +128,9 @@ public class PortfolioService extends Application {
 	static {
 		publishToTradeHistoryTopic = Boolean.parseBoolean(System.getenv("TRADE_HISTORY_ENABLED"));
 		logger.info("Publishing to Trade History topic enabled: "+publishToTradeHistoryTopic);
+
+		useCashAccount = Boolean.parseBoolean(System.getenv("CASH_ACCOUNT_ENABLED"));
+		logger.info("Cash Account microservice enabled: " + useCashAccount);
 
 		String mpUrlPropName = StockQuoteClient.class.getName() + "/mp-rest/url";
 		String urlFromEnv = System.getenv("STOCK_QUOTE_URL");
@@ -413,6 +418,26 @@ public class PortfolioService extends Application {
 			//getPortfolio will fill in the overall total and loyalty, and commit or rollback the transaction
 			logger.fine("Refreshing portfolio for "+owner);
 			portfolio = getPortfolio(owner, false, request);
+
+			if (useCashAccount) try { //need to re-request the stock with the new price from the StockQuote microservice
+				//TODO: for performance, we could put this logic in getPortfolio, that already iterates over the stocks for the portfolio
+				//      (to get the latest stock price from StockQuote), but we'd have to change its signature to avoid this re-query
+				logger.fine("Re-running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
+				List<Stock> results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
+
+				if (!results.isEmpty()) { //row exists
+					stock = results.get(0);
+					double price = stock.getPrice();
+					double lastTrade = shares*price;
+					logger.info("Setting lastTrade to "+lastTrade+" for CashAccount");
+					portfolio.setLastTrade(lastTrade);
+				} else {
+					logger.warning("Stock not found in table - unable to get its price for CashAccount!");
+				}
+			} catch (Throwable t) {
+				logger.warning("Exception getting lastTrade for CashAccount for "+owner);
+				PortfolioUtilities.logException(t);
+			}
 
 			if (publishToTradeHistoryTopic) utilities.invokeKafka(portfolio, symbol, shares, commission, kafkaAddress, kafkaTopic);
 
