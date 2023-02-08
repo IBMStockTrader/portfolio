@@ -2,7 +2,7 @@
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="sqlserver" description="Microsoft SQL Server JDBC driver jar">
-                <file id="sqlserver" name="/config/prereqs/mssql-jdbc-11.2.1.jre17.jar"/>
+                <file id="sqlserver" name="/config/prereqs/mssql-jdbc-11.2.3.jre17.jar"/>
             </library>
         </jdbcDriver>
         <properties.microsoft.sqlserver serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
