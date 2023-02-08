@@ -2,7 +2,7 @@
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="MySQL" description="MySQL JDBC driver jar">
-                <file id="mysql" name="/config/prereqs/mysql-connector-j-8.0.31.jar"/>
+                <file id="mysql" name="/config/prereqs/mysql-connector-j-8.0.32.jar"/>
             </library>
         </jdbcDriver>
         <properties serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}"
