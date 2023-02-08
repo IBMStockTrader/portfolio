@@ -423,7 +423,7 @@ public class PortfolioService extends Application {
 				//TODO: for performance, we could put this logic in getPortfolio, that already iterates over the stocks for the portfolio
 				//      (to get the latest stock price from StockQuote), but we'd have to change its signature to avoid this re-query
 				logger.fine("Re-running following SQL: SELECT * FROM Stock WHERE owner = '"+owner+"' and symbol = '"+symbol+"'");
-				List<Stock> results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
+				results = stockDAO.readStockByOwnerAndSymbol(owner, symbol);
 
 				if (!results.isEmpty()) { //row exists
 					stock = results.get(0);
