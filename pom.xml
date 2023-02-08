@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-       Copyright 2017-2022 IBM Corp All Rights Reserved
+       Copyright 2017-2022 IBM Corp, All Rights Reserved
+       Copyright 2022-2023 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -103,7 +104,7 @@
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>12.2.0.jre17</version>
+            <version>11.2.3.jre17</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
