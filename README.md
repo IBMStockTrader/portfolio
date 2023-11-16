@@ -1,5 +1,6 @@
 <!--
        Copyright 2017-2021 IBM Corp All Rights Reserved
+       Copyright 2022-2023 Kyndryl Corp, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,8 +16,8 @@
 -->
 
 This microservice manages a *stock portfolio*.  The data is backed by two relational database
-(such as **DB2** or **PostgreSQL**) tables, communicated with via *JDBC*.  The following operations
-are available:
+(such as **DB2**, **PostgreSQL** or **MS SQL Server**) tables, communicated with via *JDBC*.
+The following operations are available:
 
 `GET /` - gets summary data for all portfolios.
 
@@ -48,13 +49,14 @@ The above REST call would also add a row to the Stocks table via a SQL statement
 and would update the corresponding row in the Portfolio table via a SQL statement like
 `UPDATE Portfolio SET total = 19120.35, loyalty = 'Bronze' WHERE owner = 'John'`.
 
-The code should work with any *JDBC* provider.  It has been tested with **DB2**, **PostgreSQL** and with **Derby**.  Changing
-providers simply means updating the *Dockerfile* to copy the *JDBC* jar file into the Docker image, and updating
-the *server.xml* to reference it and specify any database-specific settings.  No *Java* code changes are necessary
-when changing *JDBC* providers.  The database can either be another pod in the same *Kubernetes* environment, or
-it can be running on "bare metal" in a traditional on-premises environment.  Endpoint and credential info is
-specified in the *Kubernetes* secret and made available as environment variables to the server.xml of WebSphere
-Liberty.  See the *manifests/portfolio-values.yaml* for details.
+The code should work with any *JDBC* provider.  It has been tested with **DB2**, **PostgreSQL**, **MS SQL Server**,
+and with **Derby**.  Changing providers simply means updating the *Dockerfile* to copy the *JDBC* jar file into the
+Docker image, and updating the *server.xml* to reference it and specify any database-specific settings.  No *Java*
+code changes are necessary when changing *JDBC* providers.  The database can either be another pod in the same
+*Kubernetes* environment, or running on "bare metal" in a traditional on-premises environment, or, *preferably*, it
+could be a database-as-a-service in your preferred hyperscaler.  Endpoint and credential info is specified in the
+*Kubernetes* secret and made available as environment variables to the *server.xml* of **Open Liberty**.  See the
+*manifests/portfolio-values.yaml* for details.
 
 ### Prerequisites for ICP Deployment
  This project requires two secrets: `jwt` and `db2`.  You can get the DB2 values from inspecting your DB2 secrets.
@@ -84,7 +86,7 @@ docker tag portfolio:latest <ICP_CLUSTER>.icp:8500/stock-trader/portfolio:latest
 docker push <ICP_CLUSTER>.icp:8500/stock-trader/portfolio:latest
 ```
 
-Use WebSphere Liberty helm chart to deploy Portfolio microservice to ICP:
+Use the *Open Liberty* helm chart to deploy the *Portfolio* microservice to ICP:
 ```bash
 helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/
 helm install ibm-charts/ibm-websphere-liberty -f <VALUES_YAML> -n <RELEASE_NAME> --tls
@@ -99,3 +101,7 @@ docker push mycluster.icp:8500/stock-trader/portfolio:latest
 helm repo add ibm-charts https://raw.githubusercontent.com/IBM/charts/master/repo/stable/
 helm install ibm-charts/ibm-websphere-liberty -f manifests/portfolio-values.yaml -n portfolio --namespace stock-trader --tls
 ```
+
+Note that nowadays, we tend to use the operator, in the sibling *stocktrader-operator* repository, to deploy
+the entire Stock Trader application as a whole (to AKS, EKS, GCP, IKS, OCP, or TKG), instead of deploying the
+microservices one by one.  See the readme in the operator repo for more details.
