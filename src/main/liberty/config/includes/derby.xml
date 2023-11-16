@@ -2,7 +2,7 @@
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="Derby" description="Apache Derby JDBC driver jar">
-                <file id="derby" name="/config/prereqs/derby-10.16.1.1.jar"/>
+                <file id="derby" name="/config/prereqs/derby-10.17.1.0.jar"/>
             </library>
         </jdbcDriver>
         <properties.derby.embedded databaseName="${env.JDBC_DB}" createDatabase="create"/>
