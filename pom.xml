@@ -104,7 +104,7 @@
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>11.4.2.jre17</version>
+            <version>12.4.2.jre17</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
