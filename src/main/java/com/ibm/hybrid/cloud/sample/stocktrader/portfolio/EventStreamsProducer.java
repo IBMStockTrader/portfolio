@@ -17,6 +17,8 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.ConnectException;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
@@ -46,8 +48,8 @@ public class EventStreamsProducer {
     private final String topic;
     private final String API_KEY  = System.getenv("KAFKA_API_KEY");
     private String USERNAME = System.getenv("KAFKA_USER");
-    private String SASL_MECHANISM = System.getenv("KAFKA_SASL_MECHANISM");
-    private String SASL_JAAS_CONFIG = System.getenv("KAFKA_SASL_JAAS_CONFIG");
+    private String SASL_MECHANISM = System.getenv("KMP_MESSAGING_CONNECTOR_LIBERTY_KAFKA_SASL_MECHANISM");
+    private String SASL_JAAS_CONFIG = System.getenv("MP_MESSAGING_CONNECTOR_LIBERTY_KAFKA_SASL_JAAS_CONFIG");
 
     private KafkaProducer<String, String> kafkaProducer;
     
@@ -97,6 +99,10 @@ public class EventStreamsProducer {
             logger.warning("Error while creating producer: "+kafkaError.getMessage());
             Throwable cause = kafkaError.getCause();
             if (cause != null) logger.warning("Caused by: "+cause.getMessage());
+            StringWriter stringWriter = new StringWriter();
+            PrintWriter printWriter = new PrintWriter(stringWriter);
+            properties.list(printWriter);
+            logger.warning("KafkaProducer properties: "+stringWriter.toString());
             throw kafkaError;
         }
         return kafkaProducer;
