@@ -48,7 +48,7 @@ public class EventStreamsProducer {
     private final String topic;
     private final String API_KEY  = System.getenv("KAFKA_API_KEY");
     private String USERNAME = System.getenv("KAFKA_USER");
-    private String SASL_MECHANISM = System.getenv("KMP_MESSAGING_CONNECTOR_LIBERTY_KAFKA_SASL_MECHANISM");
+    private String SASL_MECHANISM = System.getenv("MP_MESSAGING_CONNECTOR_LIBERTY_KAFKA_SASL_MECHANISM");
     private String SASL_JAAS_CONFIG = System.getenv("MP_MESSAGING_CONNECTOR_LIBERTY_KAFKA_SASL_JAAS_CONFIG");
 
     private KafkaProducer<String, String> kafkaProducer;
