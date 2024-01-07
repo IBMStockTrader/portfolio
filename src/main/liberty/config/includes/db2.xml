@@ -3,7 +3,11 @@
     <dataSource id="PortfolioDB" jndiName="jdbc/Portfolio/PortfolioDB" connectionManagerRef="dbConnections" isolationLevel="TRANSACTION_REPEATABLE_READ">
         <jdbcDriver>
             <library name="DB2" description="DB2 JDBC driver jar">
-                <file id="db2jcc4" name="/config/prereqs/jcc-11.5.8.0.jar"/>
+                <file id="db2jcc4" name="/config/prereqs/jcc-11.5.9.0.jar"/>
+<!-- These jars aren't needed any more on DB2 LUW, but seem to still be needed with DB2 for z/OS (but aren't available via Maven Central)
+                <file id="db2jcc4-license1" name="/config/prereqs/db2jcc_license_cu.jar"/>
+                <file id="db2jcc4-license2" name="/config/prereqs/db2jcc_license_cisuz.jar"/>
+-->
             </library>
         </jdbcDriver>
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" sslConnection="${JDBC_SSL}"
