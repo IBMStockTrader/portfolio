@@ -1,6 +1,6 @@
 <!--
        Copyright 2017-2021 IBM Corp All Rights Reserved
-       Copyright 2022-2023 Kyndryl, All Rights Reserved
+       Copyright 2022-2024 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -58,34 +58,7 @@
 
     <include optional="false" location="${server.config.dir}/includes/${JDBC_KIND}.xml"/>
 
-<!-- Authentication is via JWT SSO
-    <basicRegistry id="basic" realm="BasicRegistry">
-        <user name="admin" password="admin"/>
-        <user name="stock" password="trader"/>
-        <user name="debug" password="debug"/>
-        <user name="read"  password="only"/>
-        <user name="other" password="other"/>
-        <user name="jalcorn@us.ibm.com" password="test"/>
-        <group name="StockTrader">
-            <member name="stock"/>
-            <member name="debug"/>
-            <member name="jalcorn@us.ibm.com"/>
-        </group>
-        <group name="StockViewer">
-            <member name="read"/>
-        </group>
-    </basicRegistry>
-
-    <administrator-role>
-    	<user>admin</user>
-    </administrator-role>
--->
-
     <ltpa expiration="1h"/>
-
-    <webAppSecurity allowFailOverToBasicAuth="true" displayAuthenticationRealm="true" logoutOnHttpSessionExpire="true"
-        webAlwaysLogin="true" preserveFullyQualifiedReferrerUrl="true" trackLoggedOutSSOCookies="true" ssoCookieName="StockTraderSSO"
-        useOnlyCustomCookieName="true" ssoUseDomainFromURL="true"/>
 
     <webApplication id="Portfolio" name="Portfolio" location="Portfolio.war" contextRoot="/portfolio">
         <classloader apiTypeVisibility="+third-party"/>
