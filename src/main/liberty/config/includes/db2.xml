@@ -10,8 +10,10 @@
 -->
             </library>
         </jdbcDriver>
+        <!-- Note that as of the DB2 JDBC jar in 11.5.9.0, credentials are sent encrypted now by default.  Since our mainframe doesn't have the necessary
+             crypto modules installed, we need to disable that for now, via the securityMechanism="3" below -->
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" sslConnection="${JDBC_SSL}"
-            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}" <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
-            securityMechanism="3" <!-- Disable encryption of credentials for now, as our mainframe doesn't have the crypto modules to handle this, new in 11.5.9.0 JDBC jar --> />
+            securityMechanism="3"
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
     </dataSource>
 </server>
