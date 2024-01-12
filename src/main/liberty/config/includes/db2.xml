@@ -11,6 +11,7 @@
             </library>
         </jdbcDriver>
         <properties.db2.jcc serverName="${env.JDBC_HOST}" portNumber="${env.JDBC_PORT}" databaseName="${env.JDBC_DB}" sslConnection="${JDBC_SSL}"
-            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}"/> <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+            user="${env.JDBC_ID}" password="${env.JDBC_PASSWORD}" <!-- It won't use a containerAuthDataRef for some reason, so defining credentials here instead -->
+            securityMechanism="3" <!-- Disable encryption of credentials for now, as our mainframe doesn't have the crypto modules to handle this, new in 11.5.9.0 JDBC jar --> />
     </dataSource>
 </server>
