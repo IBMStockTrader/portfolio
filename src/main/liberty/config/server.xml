@@ -54,7 +54,7 @@
     <logstashCollector source="message,trace,ffdc,accessLog" hostName="logstash" port="5044"/>
 -->
 
-    <connectionManager id="dbConnections" minPoolSize="5" maxPoolSize="50" purgePolicy="ValidateAllConnections" validationTimeout="10m"/>
+    <connectionManager id="dbConnections" minPoolSize="5" maxPoolSize="50" purgePolicy="ValidateAllConnections" agedTimeout="10m"/>
 
     <include optional="false" location="${server.config.dir}/includes/${JDBC_KIND}.xml"/>
 
