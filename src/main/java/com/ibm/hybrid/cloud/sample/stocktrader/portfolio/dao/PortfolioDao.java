@@ -1,5 +1,6 @@
 /*
-       Copyright 2019 IBM Corp All Rights Reserved
+       Copyright 2019-2021 IBM Corp, All Rights Reserved
+       Copyright 2023-2024 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,10 +17,10 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.dao;
 
-import javax.enterprise.context.RequestScoped;
+import jakarta.enterprise.context.RequestScoped;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.util.List;
 
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Portfolio;

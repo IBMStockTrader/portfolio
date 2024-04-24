@@ -1,5 +1,6 @@
 /*
-       Copyright 2017-2021 IBM Corp All Rights Reserved
+       Copyright 2017-2021 IBM Corp, All Rights Reserved
+       Copyright 2023-2024 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -30,10 +31,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 //mpOpenTracing 1.3
-import org.eclipse.microprofile.opentracing.Traced;
+//import org.eclipse.microprofile.opentracing.Traced;
+
+//mpOpenTelemetry
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 
 //JSON-P 1.1 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.JsonObject;
+import jakarta.json.JsonObject;
 
 
 public class PortfolioUtilities {
@@ -44,9 +49,9 @@ public class PortfolioUtilities {
 
 	/** Send a message to IBM Event Streams via the Kafka APIs */
 	/*  TODO: Replace this with Emitter from mpReactiveMessaging 2.0 when it becomes available */
-	@Traced
-	void invokeKafka(Portfolio portfolio, String symbol, int shares, double commission, String kafkaAddress, String kafkaTopic) {
-		if ((kafkaAddress == null) || kafkaAddress.isEmpty()) {
+	@WithSpan
+	void invokeKafka(@SpanAttribute("portfolio") Portfolio portfolio, @SpanAttribute("symbol") String symbol, @SpanAttribute("shares") int shares, @SpanAttribute("commission") double commission, String kafkaAddress, String kafkaTopic) {
+			if ((kafkaAddress == null) || kafkaAddress.isEmpty()) {
 			logger.info("Kafka provider not configured, so not sending Kafka message about this stock trade");
 			return; //only do the following if Kafka is configured
 		}

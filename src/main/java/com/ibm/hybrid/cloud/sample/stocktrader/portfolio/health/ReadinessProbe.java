@@ -1,5 +1,6 @@
 /*
-       Copyright 2019 IBM Corp All Rights Reserved
+       Copyright 2019-2021 IBM Corp, All Rights Reserved
+       Copyright 2023-2024 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -25,7 +26,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 //CDI 2.0
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 //mpHealth 1.0
 import org.eclipse.microprofile.health.HealthCheck;

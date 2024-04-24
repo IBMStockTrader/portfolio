@@ -16,14 +16,14 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import javax.persistence.Id;
-import javax.persistence.IdClass;
-import javax.persistence.JoinColumn;
-import javax.persistence.NamedQuery;
-import javax.persistence.Column;
-import javax.persistence.ManyToOne;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.Column;
+import jakarta.persistence.ManyToOne;
 
 @Entity
 @Table

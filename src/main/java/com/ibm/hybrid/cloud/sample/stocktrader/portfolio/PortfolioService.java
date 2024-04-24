@@ -1,6 +1,6 @@
 /*
        Copyright 2017-2021 IBM Corp, All Rights Reserved
-       Copyright 2023 Kyndryl, All Rights Reserved
+       Copyright 2023-2024 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -38,8 +38,8 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 //CDI 2.0
-import javax.inject.Inject;
-import javax.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
+import jakarta.enterprise.context.RequestScoped;
 
 //mpConfig 1.3
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -53,39 +53,43 @@ import org.eclipse.microprofile.auth.LoginConfig;
 import org.eclipse.microprofile.metrics.annotation.Counted;
 
 //mpOpenTracing 1.3
-import org.eclipse.microprofile.opentracing.Traced;
+//import org.eclipse.microprofile.opentracing.Traced;
+
+//mpOpenTelemetry
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 
 //mpRestClient 1.3
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 //Transactions
-import javax.transaction.Transactional;
-import javax.transaction.Transactional.TxType;
+import jakarta.transaction.Transactional;
+import jakarta.transaction.Transactional.TxType;
 
 //JNDI 1.0
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 //Servlet 4.0
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 //JAX-RS 2.1 (JSR 339)
-import javax.ws.rs.core.Application;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ApplicationPath;
-import javax.ws.rs.BadRequestException; //400 error
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.Path;
-import javax.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Application;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.ApplicationPath;
+import jakarta.ws.rs.BadRequestException; //400 error
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.WebApplicationException;
 
 @ApplicationPath("/")
 @Path("/")
@@ -203,7 +207,7 @@ public class PortfolioService extends Application {
 	@POST
 	@Path("/{owner}")
 	@Produces(MediaType.APPLICATION_JSON)
-	@Counted(name="portfolios", displayName="Stock Trader portfolios", description="Number of portfolios created in the Stock Trader application")
+	@Counted(name="portfolios", description="Number of portfolios created in the Stock Trader application")
 	@Transactional
 	//	@RolesAllowed({"StockTrader"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	public Portfolio createPortfolio(@PathParam("owner") String owner, @QueryParam("accountID") String accountID) throws SQLException {
@@ -344,8 +348,9 @@ public class PortfolioService extends Application {
 		return portfolio;
 	}
 
-	@Traced
-	private Portfolio getPortfolioWithoutStocks(String owner) throws SQLException {
+//	@Traced
+	@WithSpan
+	private Portfolio getPortfolioWithoutStocks(@SpanAttribute("owner") String owner) throws SQLException {
 		Portfolio portfolio = null;
 
 		try {

@@ -1,6 +1,6 @@
 /*
        Copyright 2020-2021 IBM Corp, All Rights Reserved
-       Copyright 2023 Kyndryl, All Rights Reserved
+       Copyright 2023-2024 Kyndryl, All Rights Reserved
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,20 +21,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import javax.persistence.Transient;
-import javax.persistence.Id;
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.NamedQuery;
-import javax.persistence.OneToMany;
-import javax.json.JsonObject;
-import javax.json.bind.annotation.JsonbTransient;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Id;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.OneToMany;
+import jakarta.json.JsonObject;
+import jakarta.json.bind.annotation.JsonbTransient;
 
 //JSON-P 1.0 (JSR 353).  This replaces my old usage of IBM's JSON4J (com.ibm.json.java.JSONObject)
-import javax.json.Json;
-import javax.json.JsonObjectBuilder;
+import jakarta.json.Json;
+import jakarta.json.JsonObjectBuilder;
 
 @Entity
 @Table
