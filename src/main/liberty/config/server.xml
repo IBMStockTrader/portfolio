@@ -19,10 +19,10 @@
     <featureManager>
         <feature>restfulWS-3.1</feature>
         <feature>microProfile-6.1</feature>
+        <feature>persistence-3.1</feature>
         <feature>jdbc-4.3</feature>
-        <feature>jpa-3.1</feature>
         <feature>jndi-1.0</feature>
-        <feature>appSecurity-3.0</feature>
+        <feature>appSecurity-5.0</feature>
 <!--    <feature>restConnector-2.0</feature>
         <feature>logstashCollector-1.0</feature> -->
     </featureManager>
