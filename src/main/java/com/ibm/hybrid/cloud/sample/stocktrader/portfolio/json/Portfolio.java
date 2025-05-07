@@ -38,7 +38,7 @@ import jakarta.json.JsonObjectBuilder;
 
 @Entity
 @Table
-@NamedQuery(name = "Portfolio.findAll", query = "SELECT p FROM Portfolio p")
+@NamedQuery(name = "Portfolio.findAll", query = "SELECT p FROM Portfolio p ORDER BY p.owner ASC")
 /** JSON-B POJO class representing a Portfolio JSON object */
 public class Portfolio {
 

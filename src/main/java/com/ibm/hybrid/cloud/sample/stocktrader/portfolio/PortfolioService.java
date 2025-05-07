@@ -26,6 +26,8 @@ import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.dao.StockDao;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -38,10 +40,12 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 //CDI 2.0
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.enterprise.context.RequestScoped;
 
 //mpConfig 1.3
+import jakarta.ws.rs.*;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 //mpHealth stuff moved to health subpackage
@@ -77,24 +81,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.ApplicationPath;
-import jakarta.ws.rs.BadRequestException; //400 error
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.WebApplicationException;
 
 @ApplicationPath("/")
 @Path("/")
 @LoginConfig(authMethod = "MP-JWT", realmName = "jwt-jaspi")
-@RequestScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
+@ApplicationScoped //enable interceptors like @Transactional (note you need a WEB-INF/beans.xml in your war)
 /** This version stores the Portfolios via JPA to DB2 (or whatever JDBC provider is defined in your server.xml).
  */
 public class PortfolioService extends Application {
@@ -160,22 +151,67 @@ public class PortfolioService extends Application {
 		return consecutiveErrors<MAX_ERRORS;
 	}
 
+//	@GET
+//	@Path("/")
+//	@Produces(MediaType.APPLICATION_JSON)
+//	@Transactional
+//	@Deprecated
+////	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
+//	public Portfolio[] getPortfolios() throws SQLException {
+//		int count = 0;
+//		Portfolio[] portfolios = null;
+//
+//		try {
+//			logger.fine("Running following SQL: SELECT * FROM Portfolio");
+//			List<Portfolio> portfolioList = portfolioDAO.readAllPortfolios();
+//			count = portfolioList.size();
+//
+//			portfolios = new Portfolio[count];
+//			portfolioList.toArray(portfolios);
+//
+//			consecutiveErrors = 0;
+//		} catch (Throwable t) {
+//			consecutiveErrors++;
+//			logger.warning("Failed getting portfolios");
+//			PortfolioUtilities.logException(t);
+//		}
+//
+//		if (count == 0) {
+//			logger.info("No portfolios to return");
+//		} else {
+//			logger.fine("Returning "+count+" portfolios");
+//
+//			if (logger.isLoggable(Level.FINE)) {
+//				StringBuffer json = new StringBuffer("[");
+//				for (int index=0; index<count; index++) {
+//					Portfolio portfolio = portfolios[index];
+//					json.append(portfolio.toString());
+//					if (index != count-1) json.append(", ");
+//				}
+//				json.append("]");
+//				logger.fine(json.toString());
+//			}
+//		}
+//
+//		return portfolios;
+//	}
+
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Transactional
+	@Deprecated
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
-	public Portfolio[] getPortfolios() throws SQLException {
+	public List<Portfolio> getPortfolios(@QueryParam("page") @DefaultValue("1") int pageNumber, @QueryParam("pageSize") @DefaultValue("10") int pageSize, @QueryParam("owners") List<String> owners) throws SQLException {
 		int count = 0;
-		Portfolio[] portfolios = null;
+		List<Portfolio> portfolios= new ArrayList<>();
 
 		try {
-			logger.fine("Running following SQL: SELECT * FROM Portfolio");
-			List<Portfolio> portfolioList = portfolioDAO.readAllPortfolios();
-			count = portfolioList.size();
-
-			portfolios = new Portfolio[count];
-			portfolioList.toArray(portfolios);
+			logger.fine("Grabbing page "+ pageNumber+" with "+ pageSize + " entries");
+			logger.fine("Running following SQL: SELECT * FROM Portfolio ORDER BY owner");
+//			List<Portfolio> portfolioList = portfolioDAO.readAllPortfolios();
+			portfolios = portfolioDAO.getPageOfPortfolios(pageNumber, pageSize);
+			count = portfolios.size();
 
 			consecutiveErrors = 0;
 		} catch (Throwable t) {
@@ -192,7 +228,7 @@ public class PortfolioService extends Application {
 			if (logger.isLoggable(Level.FINE)) {
 				StringBuffer json = new StringBuffer("[");
 				for (int index=0; index<count; index++) {
-					Portfolio portfolio = portfolios[index];
+					Portfolio portfolio = portfolios.get(index);
 					json.append(portfolio.toString());
 					if (index != count-1) json.append(", ");
 				}
@@ -274,8 +310,7 @@ public class PortfolioService extends Application {
 					//call the StockQuote microservice to get the current price of this stock
 					logger.fine("Calling stock-quote microservice for "+symbol);
 
-					String jwt = request.getHeader("Authorization");
-					quote = stockQuoteClient.getStockQuote(jwt, symbol);
+					quote = stockQuoteClient.getStockQuote(symbol);
 
 					if (quote != null) {
 						date = quote.getDate();

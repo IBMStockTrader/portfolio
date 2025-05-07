@@ -17,39 +17,62 @@
 
 package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.dao;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.RequestScoped;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+
 import java.util.List;
 
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Portfolio;
+import jakarta.persistence.TypedQuery;
 
+// TODO move to Jakarta Data
 @RequestScoped
 public class PortfolioDao {
 
     @PersistenceContext(name = "jpa-unit")
     private EntityManager em;
 
+    private TypedQuery query;
+
+    @WithSpan
     public void createPortfolio(Portfolio portfolio) {
         em.persist(portfolio);
     }
 
+    @WithSpan
     public Portfolio readEvent(String owner) {
         return em.find(Portfolio.class, owner);
     }
 
+    @WithSpan
     public void updatePortfolio(Portfolio portfolio) {
         em.merge(portfolio);
         em.flush();
     }
 
+    @WithSpan
     public void deletePortfolio(Portfolio portfolio) {
         em.remove(em.merge(portfolio));
     }
 
     public List<Portfolio> readAllPortfolios() {
-        return em.createNamedQuery("Portfolio.findAll", Portfolio.class).getResultList();
+        if(query==null){
+            query = em.createNamedQuery("Portfolio.findAll", Portfolio.class);
+        }
+        return query.getResultList();
+    }
+
+    @WithSpan
+    public List<Portfolio> getPageOfPortfolios(int pageNumber, int pageSize) {
+        // From https://www.baeldung.com/jpa-pagination
+        if (query==null){
+            query = em.createNamedQuery("Portfolio.findAll", Portfolio.class);
+        }
+        query.setFirstResult((pageNumber - 1) * pageSize);
+        return query.setMaxResults(pageSize).getResultList();
     }
 
 }
