@@ -32,7 +32,7 @@ spec:
   providesApis:
     - portfolio-api
   dependsOn:
-    - component:default/stock-quote-client-config
+    - component:default/stock-quote
 metadata:
   name: portfolio
   labels:
