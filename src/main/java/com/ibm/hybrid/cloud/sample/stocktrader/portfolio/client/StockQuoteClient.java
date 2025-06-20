@@ -19,30 +19,38 @@ package com.ibm.hybrid.cloud.sample.stocktrader.portfolio.client;
 
 import com.ibm.hybrid.cloud.sample.stocktrader.portfolio.json.Quote;
 
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.Path;
 
+import jakarta.ws.rs.core.MediaType;
+import org.eclipse.microprofile.rest.client.annotation.RegisterClientHeaders;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+
+import java.util.List;
 
 @ApplicationPath("/")
 @Path("/")
 @ApplicationScoped
 @RegisterRestClient
+@RegisterClientHeaders //To enable JWT propagation
 /** mpRestClient "remote" interface for the stock quote microservice */
 public interface StockQuoteClient {
 	@GET
 	@Path("/")
-	@Produces("application/json")
-	public Quote[] getAllCachedQuotes(@HeaderParam("Authorization") String jwt);
+	@Produces(MediaType.APPLICATION_JSON)
+	@WithSpan(kind = SpanKind.CLIENT, value="StockQuoteClient.getAllCachedQuotes")
+	public List<Quote> getAllCachedQuotes();
 
 	@GET
 	@Path("/{symbol}")
-	@Produces("application/json")
-	public Quote getStockQuote(@HeaderParam("Authorization") String jwt, @PathParam("symbol") String symbol);
+	@Produces(MediaType.APPLICATION_JSON)
+	@WithSpan(kind = SpanKind.CLIENT, value="StockQuoteClient.getStockQuote")
+	public Quote getStockQuote(@PathParam("symbol") String symbol);
 }
