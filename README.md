@@ -106,3 +106,6 @@ helm install ibm-charts/ibm-websphere-liberty -f manifests/portfolio-values.yaml
 Note that nowadays, we tend to use the operator, in the sibling *stocktrader-operator* repository, to deploy
 the entire Stock Trader application as a whole (to AKS, EKS, GCP, IKS, OCP, or TKG), instead of deploying the
 microservices one by one.  See the readme in the operator repo for more details.
+
+
+
